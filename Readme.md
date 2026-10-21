@@ -135,6 +135,3 @@ This project is intended to strengthen practical understanding of:
 - PostgreSQL and Docker.
 - Unit testing and integration testing.
 
-## Disclaimer
-
-This project is for educational purposes only. Its rules and thresholds are simplified examples and are not suitable for making real financial or fraud decisions without further validation.
