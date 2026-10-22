@@ -430,3 +430,6 @@ FodyWeavers.xsd
 # .NET build output
 **/bin/
 **/obj/
+
+# Local development settings and secrets
+Transaction-Fraud-Detection-API/appsettings.Development.json
