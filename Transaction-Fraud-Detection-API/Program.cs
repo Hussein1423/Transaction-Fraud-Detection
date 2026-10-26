@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Transaction_Fraud_Detection_API.Data;
-
+using Transaction_Fraud_Detection_API.FraudDetection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +10,11 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddScoped<IFraudEvaluationService, FraudEvaluationService>();
+
+builder.Services.AddScoped<IFraudRule, HighAmountRule>();
+builder.Services.AddScoped<IFraudRule, HighVelocityRule>();
+builder.Services.AddScoped<IFraudRule, DuplicateLikeTransactionRule>();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException(
