@@ -16,6 +16,8 @@ builder.Services.AddScoped<IFraudRule, HighAmountRule>();
 builder.Services.AddScoped<IFraudRule, HighVelocityRule>();
 builder.Services.AddScoped<IFraudRule, DuplicateLikeTransactionRule>();
 
+builder.Services.AddScoped<TransactionEvaluationWorkflowService>();
+
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException(
         "Connection string 'DefaultConnection' was not found.");
