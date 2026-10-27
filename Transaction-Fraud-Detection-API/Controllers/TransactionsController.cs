@@ -63,4 +63,24 @@ public class TransactionsController : ControllerBase
         return Ok(transactions);
     }
 
+    [HttpGet("{transactionId:guid}/evaluation/v1")]
+    [ProducesResponseType(typeof(FraudEvaluationDetailsDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GetFraudEvaluationDetails(Guid transactionId)
+    {
+        var evaluation = await _transactionEvaluationWorkflowService
+            .GetFraudEvaluationDetailsAsync(transactionId);
+
+        if (evaluation is null)
+        {
+            return NotFound(new
+            {
+                message = "Fraud evaluation was not found."
+            });
+        }
+
+        return Ok(evaluation);
+    }
+
 }
