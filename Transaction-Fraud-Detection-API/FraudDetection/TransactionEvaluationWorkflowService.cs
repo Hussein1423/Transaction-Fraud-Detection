@@ -96,6 +96,28 @@ public class TransactionEvaluationWorkflowService
     }
 
 
+    public async Task<TransactionEvaluationDetailsDto?> GetTransactionWithEvaluationAsync(Guid transactionId)
+    {
+        return await _dbContext.Transactions
+            .Where(t => t.TransactionId == transactionId)
+            .Join(
+                _dbContext.FraudEvaluations,
+                transaction => transaction.TransactionId,
+                evaluation => evaluation.TransactionId,
+                (transaction, evaluation) => new TransactionEvaluationDetailsDto
+                {
+                    TransactionId = transaction.TransactionId,
+                    UserId = transaction.UserId,
+                    Amount = transaction.Amount,
+                    Currency = transaction.Currency,
+                    MerchantId = transaction.MerchantId,
+                    Timestamp = transaction.Timestamp,
+                    RiskScore = evaluation.RiskScore,
+                    Decision = evaluation.Decision,
+                    EvaluatedAt = evaluation.EvaluatedAt
+                })
+            .FirstOrDefaultAsync();
+    }
     public async Task<FraudEvaluationResultDto> ProcessTransactionAsync( CreateTransactionRequestDto request)
     {
         var transaction = CreateTransaction(request);

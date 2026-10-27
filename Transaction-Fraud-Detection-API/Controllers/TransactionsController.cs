@@ -20,4 +20,23 @@ public class TransactionsController : ControllerBase
         var result = await _transactionEvaluationWorkflowService.ProcessTransactionAsync(request);
         return Ok(result);
     }
+
+
+    [HttpGet("{transactionId:guid}/v1")]
+    public async Task<IActionResult> GetTransaction(Guid transactionId)
+    {
+        var transaction = await _transactionEvaluationWorkflowService
+            .GetTransactionWithEvaluationAsync(transactionId);
+
+        if (transaction is null)
+        {
+            return NotFound(new
+            {
+                message = "Transaction or its evaluation was not found."
+            }
+            );
+        }
+        return Ok(transaction);
+    }
+
 }
