@@ -169,20 +169,31 @@ public class TransactionEvaluationWorkflowService
 
         return evaluation;
     }
-    public async Task<FraudEvaluationResultDto> ProcessTransactionAsync( CreateTransactionRequestDto request)
+    public async Task<FraudEvaluationResultDto> ProcessTransactionAsync(CreateTransactionRequestDto request)
     {
-        var transaction = CreateTransaction(request);
+        await using var dbTransaction =  await _dbContext.Database.BeginTransactionAsync();
+        try
+        {
+            var transaction = CreateTransaction(request);
 
-        await SaveTransactionAsync(transaction);
+            await SaveTransactionAsync(transaction);
 
-        var context = await BuildContextAsync(transaction);
+            var context = await BuildContextAsync(transaction);
 
-        var result = EvaluateTransaction(context);
+            var result = EvaluateTransaction(context);
 
-        var evaluation = await SaveEvaluationAsync(transaction, result);
+            var evaluation = await SaveEvaluationAsync(transaction, result);
 
-        await SaveTriggeredRulesAsync(evaluation, result);
+            await SaveTriggeredRulesAsync(evaluation, result);
 
-        return result;
+            await dbTransaction.CommitAsync();
+
+            return result;
+        }
+        catch
+        {
+            await dbTransaction.RollbackAsync();
+            throw;
+        }
     }
 }
