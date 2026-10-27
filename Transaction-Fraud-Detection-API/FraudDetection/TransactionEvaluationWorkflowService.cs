@@ -96,6 +96,79 @@ public class TransactionEvaluationWorkflowService
     }
 
 
+    public async Task<TransactionEvaluationDetailsDto?> GetTransactionWithEvaluationAsync(Guid transactionId)
+    {
+        return await _dbContext.Transactions
+            .Where(t => t.TransactionId == transactionId)
+            .Join(
+                _dbContext.FraudEvaluations,
+                transaction => transaction.TransactionId,
+                evaluation => evaluation.TransactionId,
+                (transaction, evaluation) => new TransactionEvaluationDetailsDto
+                {
+                    TransactionId = transaction.TransactionId,
+                    UserId = transaction.UserId,
+                    Amount = transaction.Amount,
+                    Currency = transaction.Currency,
+                    MerchantId = transaction.MerchantId,
+                    Timestamp = transaction.Timestamp,
+                    RiskScore = evaluation.RiskScore,
+                    Decision = evaluation.Decision,
+                    EvaluatedAt = evaluation.EvaluatedAt
+                })
+            .FirstOrDefaultAsync();
+    }
+
+    public async Task<List<TransactionEvaluationDetailsDto>> GetFlaggedTransactionsAsync()
+    {
+        return await _dbContext.Transactions
+            .Join(
+                _dbContext.FraudEvaluations,
+                transaction => transaction.TransactionId,
+                evaluation => evaluation.TransactionId,
+                (transaction, evaluation) => new { transaction, evaluation })
+            .Where(x => x.evaluation.Decision == Enums.FraudDecision.FlagForReview)
+            .OrderByDescending(x => x.evaluation.EvaluatedAt)
+            .Select(x => new TransactionEvaluationDetailsDto
+            {
+                TransactionId = x.transaction.TransactionId,
+                UserId = x.transaction.UserId,
+                Amount = x.transaction.Amount,
+                Currency = x.transaction.Currency,
+                MerchantId = x.transaction.MerchantId,
+                Timestamp = x.transaction.Timestamp,
+                RiskScore = x.evaluation.RiskScore,
+                Decision = x.evaluation.Decision,
+                EvaluatedAt = x.evaluation.EvaluatedAt
+            })
+            .ToListAsync();
+    }
+
+    public async Task<FraudEvaluationDetailsDto?> GetFraudEvaluationDetailsAsync(Guid transactionId)
+    {
+        var evaluation = await _dbContext.FraudEvaluations
+            .Where(e => e.TransactionId == transactionId)
+            .Select(e => new FraudEvaluationDetailsDto
+            {
+                TransactionId = e.TransactionId,
+                RiskScore = e.RiskScore,
+                Decision = e.Decision,
+                EvaluatedAt = e.EvaluatedAt,
+                TriggeredRules = e.FraudEvaluationId == Guid.Empty
+                    ? new List<TriggeredRuleResultDto>()
+                    : _dbContext.TriggeredRules
+                        .Where(r => r.FraudEvaluationId == e.FraudEvaluationId)
+                        .Select(r => new TriggeredRuleResultDto
+                        {
+                            RuleCode = r.RuleCode,
+                            PointsAwarded = r.PointsAwarded
+                        })
+                        .ToList()
+            })
+            .FirstOrDefaultAsync();
+
+        return evaluation;
+    }
     public async Task<FraudEvaluationResultDto> ProcessTransactionAsync( CreateTransactionRequestDto request)
     {
         var transaction = CreateTransaction(request);
