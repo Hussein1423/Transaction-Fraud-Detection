@@ -1,5 +1,6 @@
 ﻿
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Transaction_Fraud_Detection_API.Data;
 using Transaction_Fraud_Detection_API.DTOs;
 using Transaction_Fraud_Detection_API.Enums;
@@ -180,11 +181,49 @@ public class TransactionEvaluationWorkflowServiceTests
 
     private static AppDbContext CreateDbContext()
     {
+        var password = Environment.GetEnvironmentVariable(
+            "TFD_TEST_DB_PASSWORD");
+
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            throw new InvalidOperationException(
+                "Environment variable TFD_TEST_DB_PASSWORD is not set.");
+        }
+
+        var connectionString = new NpgsqlConnectionStringBuilder
+        {
+            Host = "localhost",
+            Port = 5432,
+            Database = "TFDDB_Test",
+            Username = "tfduser",
+            Password = password
+        }.ConnectionString;
+
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .UseNpgsql(connectionString)
             .Options;
 
-        return new AppDbContext(options);
+        var dbContext = new AppDbContext(options);
+
+        var databaseName = dbContext.Database
+    .GetDbConnection()
+    .Database;
+
+        if (databaseName != "TFDDB_Test")
+        {
+            throw new InvalidOperationException(
+                $"Tests must not run against database '{databaseName}'.");
+        }
+
+        dbContext.Database.EnsureCreated();
+        dbContext.TriggeredRules.RemoveRange(dbContext.TriggeredRules);
+        dbContext.FraudEvaluations.RemoveRange(dbContext.FraudEvaluations);
+        dbContext.Transactions.RemoveRange(dbContext.Transactions);
+
+        dbContext.SaveChanges();
+
+
+        return dbContext;
     }
 
     private static CreateTransactionRequestDto CreateRequest()
