@@ -80,6 +80,22 @@ public class TransactionEvaluationWorkflowService
         return evaluation;
     }
 
+
+    private async Task SaveTriggeredRulesAsync(FraudEvaluation evaluation,FraudEvaluationResultDto result)
+    {
+        var triggeredRules = result.TriggeredRules.Select(rule =>
+            new TriggeredRule
+            {
+                FraudEvaluationId = evaluation.FraudEvaluationId,
+                RuleCode = rule.RuleCode,
+                PointsAwarded = rule.PointsAwarded
+            });
+
+        _dbContext.TriggeredRules.AddRange(triggeredRules);
+        await _dbContext.SaveChangesAsync();
+    }
+
+
     public async Task<FraudEvaluationResultDto> ProcessTransactionAsync( CreateTransactionRequestDto request)
     {
         var transaction = CreateTransaction(request);
@@ -90,7 +106,9 @@ public class TransactionEvaluationWorkflowService
 
         var result = EvaluateTransaction(context);
 
-        await SaveEvaluationAsync(transaction, result);
+        var evaluation = await SaveEvaluationAsync(transaction, result);
+
+        await SaveTriggeredRulesAsync(evaluation, result);
 
         return result;
     }
