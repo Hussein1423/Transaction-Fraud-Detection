@@ -7,4 +7,6 @@ public class FraudEvaluationResultDto
     public int RiskScore { get; set; }
 
     public FraudDecision Decision { get; set; }
+
+    public List<TriggeredRuleResultDto> TriggeredRules { get; set; } = new();
 }

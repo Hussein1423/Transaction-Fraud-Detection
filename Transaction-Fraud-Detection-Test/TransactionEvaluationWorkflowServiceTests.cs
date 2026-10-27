@@ -125,6 +125,59 @@ public class TransactionEvaluationWorkflowServiceTests
         Assert.Equal(FraudDecision.FlagForReview, savedEvaluation.Decision);
     }
 
+
+    [Fact]
+    public async Task ProcessTransactionAsync_WhenRulesTrigger_SavesTriggeredRules()
+    {
+        await using var dbContext = CreateDbContext();
+
+        var fraudEvaluationService = new FakeFraudEvaluationService(
+            new FraudEvaluationResultDto
+            {
+                RiskScore = 70,
+                Decision = FraudDecision.FlagForReview,
+                TriggeredRules = new List<TriggeredRuleResultDto>
+                {
+                new()
+                {
+                    RuleCode = FraudRuleCode.HighAmount,
+                    PointsAwarded = 30
+                },
+                new()
+                {
+                    RuleCode = FraudRuleCode.HighVelocity,
+                    PointsAwarded = 40
+                }
+                }
+            });
+
+        var workflow = new TransactionEvaluationWorkflowService(
+            dbContext,
+            fraudEvaluationService);
+
+        await workflow.ProcessTransactionAsync(CreateRequest());
+
+        var evaluation = await dbContext.FraudEvaluations.SingleAsync();
+        var triggeredRules = await dbContext.TriggeredRules
+            .OrderBy(rule => rule.RuleCode)
+            .ToListAsync();
+
+        Assert.Equal(2, triggeredRules.Count);
+
+        Assert.All(
+            triggeredRules,
+            rule => Assert.Equal(evaluation.FraudEvaluationId, rule.FraudEvaluationId));
+
+        Assert.Contains(triggeredRules, rule =>
+            rule.RuleCode == FraudRuleCode.HighAmount &&
+            rule.PointsAwarded == 30);
+
+        Assert.Contains(triggeredRules, rule =>
+            rule.RuleCode == FraudRuleCode.HighVelocity &&
+            rule.PointsAwarded == 40);
+    }
+
+
     private static AppDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
