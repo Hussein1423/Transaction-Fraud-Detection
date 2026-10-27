@@ -15,6 +15,8 @@ public class TransactionsController : ControllerBase
     }
 
     [HttpPost("v1")]
+    [ProducesResponseType(typeof(FraudEvaluationResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateTransaction([FromBody] CreateTransactionRequestDto request)
     {
         var result = await _transactionEvaluationWorkflowService.ProcessTransactionAsync(request);
@@ -23,6 +25,9 @@ public class TransactionsController : ControllerBase
 
 
     [HttpGet("{transactionId:guid}/v1")]
+    [ProducesResponseType(typeof(FraudEvaluationResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetTransaction(Guid transactionId)
     {
         var transaction = await _transactionEvaluationWorkflowService
@@ -37,6 +42,25 @@ public class TransactionsController : ControllerBase
             );
         }
         return Ok(transaction);
+    }
+
+
+    [HttpGet("flagged/v1")]
+    [ProducesResponseType(typeof(FraudEvaluationResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GetFlaggedTransactions()
+    {
+        var transactions = await _transactionEvaluationWorkflowService
+            .GetFlaggedTransactionsAsync();
+        if(transactions is null || !transactions.Any())
+        {
+            return NotFound(new
+            {
+                message = "No flagged transactions found."
+            });
+        }
+        return Ok(transactions);
     }
 
 }
