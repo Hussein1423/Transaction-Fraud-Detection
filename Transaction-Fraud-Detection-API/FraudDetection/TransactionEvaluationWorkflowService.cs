@@ -119,7 +119,10 @@ public class TransactionEvaluationWorkflowService
             .FirstOrDefaultAsync();
     }
 
-    public async Task<List<TransactionEvaluationDetailsDto>> GetFlaggedTransactionsAsync()
+
+    public async Task<List<TransactionEvaluationDetailsDto>> GetFlaggedTransactionsAsync(
+        int pageNumber = 1,
+        int pageSize = 10)
     {
         return await _dbContext.Transactions
             .Join(
@@ -129,6 +132,9 @@ public class TransactionEvaluationWorkflowService
                 (transaction, evaluation) => new { transaction, evaluation })
             .Where(x => x.evaluation.Decision == Enums.FraudDecision.FlagForReview)
             .OrderByDescending(x => x.evaluation.EvaluatedAt)
+            .ThenBy(x => x.transaction.TransactionId)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
             .Select(x => new TransactionEvaluationDetailsDto
             {
                 TransactionId = x.transaction.TransactionId,
@@ -143,6 +149,7 @@ public class TransactionEvaluationWorkflowService
             })
             .ToListAsync();
     }
+
 
     public async Task<FraudEvaluationDetailsDto?> GetFraudEvaluationDetailsAsync(Guid transactionId)
     {
