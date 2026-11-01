@@ -433,3 +433,8 @@ FodyWeavers.xsd
 
 # Local development settings and secrets
 Transaction-Fraud-Detection-API/appsettings.Development.json
+
+
+# Postman
+**/postman/
+**/.postman/
