@@ -5,5 +5,6 @@ public enum FraudRuleCode
     HighAmount,
     HighVelocity,
     DuplicateLikeTransaction,
-    IdenticalAmountAcrossMerchants
+    IdenticalAmountAcrossMerchants,
+    HighCumulativeSpending
 }
