@@ -18,7 +18,7 @@ namespace Transaction_Fraud_Detection_API.FraudDetection
             transactionsInLastTwoMinutes++; // Include the current transaction in the count
             if (transactionsInLastTwoMinutes >= 2)
             {
-                return new FraudRuleResult(true, 50);
+                return new FraudRuleResult(true, 10);
             }
             return new FraudRuleResult(false, 0);
         }

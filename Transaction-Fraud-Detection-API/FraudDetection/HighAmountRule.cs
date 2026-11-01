@@ -10,7 +10,7 @@ namespace Transaction_Fraud_Detection_API.FraudDetection
         {
             if (context.CurrentTransaction.Amount > 1000)
             {
-                return new FraudRuleResult(true, 30);
+                return new FraudRuleResult(true, 10);
             }
 
             return new FraudRuleResult(false, 0);

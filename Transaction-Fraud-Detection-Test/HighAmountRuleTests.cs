@@ -9,7 +9,7 @@ namespace Transaction_Fraud_Detection_Test
         [Theory]
         [InlineData(500, false, 0)]
         [InlineData(1000, false, 0)]
-        [InlineData(1001, true, 30)]
+        [InlineData(1001, true, 10)]
         public void Evaluate_TransactionAmount_ReturnsExpectedResult(
             decimal amount,
             bool expectedIsTriggered,
