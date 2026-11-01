@@ -38,11 +38,11 @@ public class TransactionEvaluationWorkflowService
 
     private async Task<List<Transaction>> GetPreviousTransactionsAsync(Transaction transaction)
     {
-        var tenMinutesAgo = transaction.Timestamp.AddMinutes(-10);
+        var twentyFourHoursAgo = transaction.Timestamp.AddHours(-24);
 
         return await _dbContext.Transactions
             .Where(t => t.UserId == transaction.UserId
-                        && t.Timestamp >= tenMinutesAgo
+                        && t.Timestamp >= twentyFourHoursAgo
                         && t.Timestamp <= transaction.Timestamp
                         && t.TransactionId != transaction.TransactionId)
             .ToListAsync();
