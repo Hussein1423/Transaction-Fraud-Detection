@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Transaction_Fraud_Detection_API.Data;
 using Transaction_Fraud_Detection_API.FraudDetection;
+using Transaction_Fraud_Detection_API.FraudDetection.Rules;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,9 +24,7 @@ builder.Services.AddScoped<IFraudRule, HighVelocityRule>();
 builder.Services.AddScoped<IFraudRule, DuplicateLikeTransactionRule>();
 builder.Services.AddScoped<IFraudRule, IdenticalAmountAcrossMerchantsRule>();
 builder.Services.AddScoped<IFraudRule, HighCumulativeSpending>();
-
-
-
+builder.Services.AddScoped<IFraudRule, MultipleCurrenciesInShortWindow>();
 
 builder.Services.AddScoped<TransactionEvaluationWorkflowService>();
 
