@@ -45,23 +45,45 @@ public class TransactionsController : ControllerBase
     }
 
 
+
     [HttpGet("flagged/v1")]
-    [ProducesResponseType(typeof(FraudEvaluationResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(List<TransactionEvaluationDetailsDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> GetFlaggedTransactions()
+    public async Task<IActionResult> GetFlaggedTransactions([FromQuery] int pageNumber = 1,[FromQuery] int pageSize = 10)
     {
+        const int maxPageSize = 100;
+
+        if (pageNumber < 1)
+        {
+            return BadRequest(new
+            {
+                message = "Page number must be greater than 0."
+            });
+        }
+
+        if (pageSize < 1 || pageSize > maxPageSize)
+        {
+            return BadRequest(new
+            {
+                message = $"Page size must be between 1 and {maxPageSize}."
+            });
+        }
+
         var transactions = await _transactionEvaluationWorkflowService
-            .GetFlaggedTransactionsAsync();
-        if(transactions is null || !transactions.Any())
+            .GetFlaggedTransactionsAsync(pageNumber, pageSize);
+
+        if (!transactions.Any())
         {
             return NotFound(new
             {
-                message = "No flagged transactions found."
+                message = "No flagged transactions found on this page."
             });
         }
+
         return Ok(transactions);
     }
+
 
     [HttpGet("{transactionId:guid}/evaluation/v1")]
     [ProducesResponseType(typeof(FraudEvaluationDetailsDto), StatusCodes.Status200OK)]
