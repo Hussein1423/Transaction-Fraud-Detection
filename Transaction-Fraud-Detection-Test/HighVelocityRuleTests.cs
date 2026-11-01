@@ -9,7 +9,7 @@ namespace Transaction_Fraud_Detection_Test
     {
         [Theory]
         [InlineData(4, false, 0)]
-        [InlineData(5, true, 40)]
+        [InlineData(5, true, 20)]
         public void Evaluate_PreviousTransactions_ReturnsExpectedResult(
             int previousTransactionCount,
             bool expectedIsTriggered,
@@ -129,7 +129,7 @@ namespace Transaction_Fraud_Detection_Test
 
             // Assert
             Assert.True(result.IsTriggered);
-            Assert.Equal(40, result.PointsAwarded);
+            Assert.Equal(20, result.PointsAwarded);
         }
 
         [Fact]

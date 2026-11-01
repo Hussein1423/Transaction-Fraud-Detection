@@ -17,10 +17,11 @@ public class TransactionEvaluationWorkflowServiceTests
     {
         // Arrange
         await using var dbContext = CreateDbContext();
+
         var fraudEvaluationService = new FakeFraudEvaluationService(
             new FraudEvaluationResultDto
             {
-                RiskScore = 30,
+                RiskScore = 0,
                 Decision = FraudDecision.Allow
             });
 
@@ -44,10 +45,10 @@ public class TransactionEvaluationWorkflowServiceTests
         Assert.NotEqual(Guid.Empty, savedTransaction.TransactionId);
 
         Assert.Equal(savedTransaction.TransactionId, savedEvaluation.TransactionId);
-        Assert.Equal(30, savedEvaluation.RiskScore);
+        Assert.Equal(0, savedEvaluation.RiskScore);
         Assert.Equal(FraudDecision.Allow, savedEvaluation.Decision);
 
-        Assert.Equal(30, result.RiskScore);
+        Assert.Equal(0, result.RiskScore);
         Assert.Equal(FraudDecision.Allow, result.Decision);
     }
 
@@ -73,8 +74,8 @@ public class TransactionEvaluationWorkflowServiceTests
         var fraudEvaluationService = new FakeFraudEvaluationService(
             new FraudEvaluationResultDto
             {
-                RiskScore = 50,
-                Decision = FraudDecision.FlagForReview
+                RiskScore = 0,
+                Decision = FraudDecision.Allow
             });
 
         var workflow = new TransactionEvaluationWorkflowService(
@@ -126,29 +127,29 @@ public class TransactionEvaluationWorkflowServiceTests
         Assert.Equal(FraudDecision.FlagForReview, savedEvaluation.Decision);
     }
 
-
     [Fact]
     public async Task ProcessTransactionAsync_WhenRulesTrigger_SavesTriggeredRules()
     {
+        // Arrange
         await using var dbContext = CreateDbContext();
 
         var fraudEvaluationService = new FakeFraudEvaluationService(
             new FraudEvaluationResultDto
             {
-                RiskScore = 70,
-                Decision = FraudDecision.FlagForReview,
+                RiskScore = 30,
+                Decision = FraudDecision.Allow,
                 TriggeredRules = new List<TriggeredRuleResultDto>
                 {
-                new()
-                {
-                    RuleCode = FraudRuleCode.HighAmount,
-                    PointsAwarded = 30
-                },
-                new()
-                {
-                    RuleCode = FraudRuleCode.HighVelocity,
-                    PointsAwarded = 40
-                }
+                    new()
+                    {
+                        RuleCode = FraudRuleCode.HighAmount,
+                        PointsAwarded = 10
+                    },
+                    new()
+                    {
+                        RuleCode = FraudRuleCode.HighVelocity,
+                        PointsAwarded = 20
+                    }
                 }
             });
 
@@ -156,9 +157,12 @@ public class TransactionEvaluationWorkflowServiceTests
             dbContext,
             fraudEvaluationService);
 
+        // Act
         await workflow.ProcessTransactionAsync(CreateRequest());
 
+        // Assert
         var evaluation = await dbContext.FraudEvaluations.SingleAsync();
+
         var triggeredRules = await dbContext.TriggeredRules
             .OrderBy(rule => rule.RuleCode)
             .ToListAsync();
@@ -167,18 +171,18 @@ public class TransactionEvaluationWorkflowServiceTests
 
         Assert.All(
             triggeredRules,
-            rule => Assert.Equal(evaluation.FraudEvaluationId, rule.FraudEvaluationId));
+            rule => Assert.Equal(
+                evaluation.FraudEvaluationId,
+                rule.FraudEvaluationId));
 
         Assert.Contains(triggeredRules, rule =>
             rule.RuleCode == FraudRuleCode.HighAmount &&
-            rule.PointsAwarded == 30);
+            rule.PointsAwarded == 10);
 
         Assert.Contains(triggeredRules, rule =>
             rule.RuleCode == FraudRuleCode.HighVelocity &&
-            rule.PointsAwarded == 40);
+            rule.PointsAwarded == 20);
     }
-
-
 
     [Fact]
     public async Task GetFlaggedTransactionsAsync_ReturnsOnlyFlaggedTransactionsInDescendingOrder()
@@ -263,9 +267,11 @@ public class TransactionEvaluationWorkflowServiceTests
 
         // Assert
         Assert.Equal(2, result.Count);
+
         Assert.Equal(
             newerTransaction.TransactionId,
             result[0].TransactionId);
+
         Assert.Equal(
             olderTransaction.TransactionId,
             result[1].TransactionId);
@@ -304,8 +310,8 @@ public class TransactionEvaluationWorkflowServiceTests
         var dbContext = new AppDbContext(options);
 
         var databaseName = dbContext.Database
-    .GetDbConnection()
-    .Database;
+            .GetDbConnection()
+            .Database;
 
         if (databaseName != "TFDDB_Test")
         {
@@ -314,12 +320,12 @@ public class TransactionEvaluationWorkflowServiceTests
         }
 
         dbContext.Database.EnsureCreated();
+
         dbContext.TriggeredRules.RemoveRange(dbContext.TriggeredRules);
         dbContext.FraudEvaluations.RemoveRange(dbContext.FraudEvaluations);
         dbContext.Transactions.RemoveRange(dbContext.Transactions);
 
         dbContext.SaveChanges();
-
 
         return dbContext;
     }

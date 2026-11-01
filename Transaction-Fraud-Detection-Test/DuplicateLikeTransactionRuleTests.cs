@@ -38,7 +38,7 @@ namespace Transaction_Fraud_Detection_Test
 
         [Theory]
         [InlineData(false, 0)]
-        [InlineData(true, 50)]
+        [InlineData(true, 10)]
         public void Evaluate_MatchingPreviousTransaction_ReturnsExpectedResult(
             bool hasMatchingTransaction,
             int expectedPoints)
@@ -129,7 +129,7 @@ namespace Transaction_Fraud_Detection_Test
 
             // Assert
             Assert.True(result.IsTriggered);
-            Assert.Equal(50, result.PointsAwarded);
+            Assert.Equal(10, result.PointsAwarded);
         }
 
         [Fact]

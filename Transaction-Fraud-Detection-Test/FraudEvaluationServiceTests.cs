@@ -68,7 +68,7 @@ namespace Transaction_Fraud_Detection_Test
             // Arrange
             var rules = new[]
             {
-                new FakeFraudRule(FraudRuleCode.HighAmount, true, 30)
+                new FakeFraudRule(FraudRuleCode.HighAmount, true, 10)
             };
 
             var service = new FraudEvaluationService(rules);
@@ -77,7 +77,7 @@ namespace Transaction_Fraud_Detection_Test
             var result = service.Evaluate(CreateContext());
 
             // Assert
-            Assert.Equal(30, result.RiskScore);
+            Assert.Equal(10, result.RiskScore);
             Assert.Equal(FraudDecision.Allow, result.Decision);
         }
 
@@ -87,8 +87,10 @@ namespace Transaction_Fraud_Detection_Test
             // Arrange
             var rules = new[]
             {
-                new FakeFraudRule(FraudRuleCode.HighAmount, true, 30),
-                new FakeFraudRule(FraudRuleCode.HighVelocity, true, 40)
+                new FakeFraudRule(FraudRuleCode.HighAmount, true, 10),
+                new FakeFraudRule(FraudRuleCode.HighVelocity, true, 20),
+                new FakeFraudRule(FraudRuleCode.HighVelocity, true, 20),
+                new FakeFraudRule(FraudRuleCode.DuplicateLikeTransaction, true, 10)
             };
 
             var service = new FraudEvaluationService(rules);
@@ -97,7 +99,7 @@ namespace Transaction_Fraud_Detection_Test
             var result = service.Evaluate(CreateContext());
 
             // Assert
-            Assert.Equal(70, result.RiskScore);
+            Assert.Equal(60, result.RiskScore);
             Assert.Equal(FraudDecision.FlagForReview, result.Decision);
         }
 
@@ -107,7 +109,10 @@ namespace Transaction_Fraud_Detection_Test
             // Arrange
             var rules = new[]
             {
-                new FakeFraudRule(FraudRuleCode.HighAmount, true, 50)
+                new FakeFraudRule(FraudRuleCode.HighAmount, true, 10),
+                new FakeFraudRule(FraudRuleCode.HighVelocity, true, 20),
+                new FakeFraudRule(FraudRuleCode.HighAmount, true, 10),
+                new FakeFraudRule(FraudRuleCode.DuplicateLikeTransaction, true, 10)
             };
 
             var service = new FraudEvaluationService(rules);
@@ -126,9 +131,15 @@ namespace Transaction_Fraud_Detection_Test
             // Arrange
             var rules = new[]
             {
-                new FakeFraudRule(FraudRuleCode.HighAmount, true, 30),
-                new FakeFraudRule(FraudRuleCode.HighVelocity, true, 40),
-                new FakeFraudRule(FraudRuleCode.DuplicateLikeTransaction, true, 50)
+                new FakeFraudRule(FraudRuleCode.HighAmount, true, 10),
+                new FakeFraudRule(FraudRuleCode.HighVelocity, true, 20),
+                new FakeFraudRule(FraudRuleCode.DuplicateLikeTransaction, true, 10),
+                 new FakeFraudRule(FraudRuleCode.HighAmount, true, 10),
+                new FakeFraudRule(FraudRuleCode.HighVelocity, true, 20),
+                new FakeFraudRule(FraudRuleCode.DuplicateLikeTransaction, true, 10),
+                 new FakeFraudRule(FraudRuleCode.HighAmount, true, 10),
+                new FakeFraudRule(FraudRuleCode.HighVelocity, true, 20),
+                new FakeFraudRule(FraudRuleCode.DuplicateLikeTransaction, true, 10)
             };
 
             var service = new FraudEvaluationService(rules);
