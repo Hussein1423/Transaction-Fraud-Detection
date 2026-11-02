@@ -26,6 +26,7 @@ builder.Services.AddScoped<IFraudRule, IdenticalAmountAcrossMerchantsRule>();
 builder.Services.AddScoped<IFraudRule, HighCumulativeSpending>();
 builder.Services.AddScoped<IFraudRule, MultipleCurrenciesInShortWindow>();
 
+builder.Services.AddScoped<IPaymentAttemptFraudRule, PaymentFailuresFollowedBySuccess>();
 builder.Services.AddScoped<TransactionEvaluationWorkflowService>();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
