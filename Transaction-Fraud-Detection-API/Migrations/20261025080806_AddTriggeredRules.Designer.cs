@@ -99,9 +99,9 @@ namespace Transaction_Fraud_Detection_API.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("RuleCode")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
+      .IsRequired()
+      .HasMaxLength(50)
+      .HasColumnType("character varying(50)");
 
                     b.HasKey("TriggeredRuleId");
 
