@@ -15,7 +15,7 @@ public class TriggeredRule
     public FraudEvaluation FraudEvaluation { get; set; } = null!;
 
     [Required]
-    [MaxLength(30)]
+    [MaxLength(50)]
     public FraudRuleCode RuleCode { get; set; }
 
     public int PointsAwarded { get; set; }

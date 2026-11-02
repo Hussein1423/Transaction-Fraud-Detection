@@ -50,6 +50,34 @@ namespace Transaction_Fraud_Detection_API.Migrations
                     b.ToTable("FraudEvaluations");
                 });
 
+            modelBuilder.Entity("Transaction_Fraud_Detection_API.Models.PaymentAttempt", b =>
+                {
+                    b.Property<Guid>("PaymentAttemptId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AttemptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("TransactionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("PaymentAttemptId");
+
+                    b.HasIndex("TransactionId");
+
+                    b.ToTable("PaymentAttempts");
+                });
+
             modelBuilder.Entity("Transaction_Fraud_Detection_API.Models.Transaction", b =>
                 {
                     b.Property<Guid>("TransactionId")
@@ -113,6 +141,17 @@ namespace Transaction_Fraud_Detection_API.Migrations
                         .WithMany()
                         .HasForeignKey("TransactionId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Transaction");
+                });
+
+            modelBuilder.Entity("Transaction_Fraud_Detection_API.Models.PaymentAttempt", b =>
+                {
+                    b.HasOne("Transaction_Fraud_Detection_API.Models.Transaction", "Transaction")
+                        .WithMany()
+                        .HasForeignKey("TransactionId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Transaction");

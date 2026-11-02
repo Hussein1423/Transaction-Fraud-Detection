@@ -14,6 +14,8 @@ public class AppDbContext : DbContext
 
     public DbSet<TriggeredRule> TriggeredRules => Set<TriggeredRule>();
 
+    public DbSet<PaymentAttempt> PaymentAttempts { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -28,6 +30,17 @@ public class AppDbContext : DbContext
        .HasConversion<string>()
        .HasMaxLength(30);
         modelBuilder.Entity<TriggeredRule>()
-    .ToTable("TriggeredRules");
+       .ToTable("TriggeredRules");
+
+        modelBuilder.Entity<PaymentAttempt>()
+            .Property(p => p.Status)
+            .HasConversion<string>()
+            .HasMaxLength(20);
+
+        modelBuilder.Entity<PaymentAttempt>()
+        .HasOne(p => p.Transaction)
+        .WithMany()
+        .HasForeignKey(p => p.TransactionId)
+        .OnDelete(DeleteBehavior.Restrict);
     }
 }
