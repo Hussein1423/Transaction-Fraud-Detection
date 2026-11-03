@@ -1,17 +1,30 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿
+using Microsoft.AspNetCore.Mvc;
+using Transaction_Fraud_Detection_API;
 using Transaction_Fraud_Detection_API.DTOs;
 using Transaction_Fraud_Detection_API.FraudDetection;
+
 namespace Transaction_Fraud_Detection_API.Controllers;
 
 [ApiController]
 [Route("api/Transactions")]
 public class TransactionsController : ControllerBase
 {
-    private readonly TransactionEvaluationWorkflowService _transactionEvaluationWorkflowService;
+    private readonly TransactionEvaluationWorkflowService
+        _transactionEvaluationWorkflowService;
 
-    public TransactionsController(TransactionEvaluationWorkflowService transactionEvaluationWorkflowService)
+    private readonly IPaymentAttemptEvaluationWorkflowService
+        _paymentAttemptEvaluationWorkflowService;
+
+    public TransactionsController(
+        TransactionEvaluationWorkflowService transactionEvaluationWorkflowService,
+        IPaymentAttemptEvaluationWorkflowService paymentAttemptEvaluationWorkflowService)
     {
-        _transactionEvaluationWorkflowService = transactionEvaluationWorkflowService;
+        _transactionEvaluationWorkflowService =
+            transactionEvaluationWorkflowService;
+
+        _paymentAttemptEvaluationWorkflowService =
+            paymentAttemptEvaluationWorkflowService;
     }
 
     [HttpPost("v1")]
@@ -20,9 +33,9 @@ public class TransactionsController : ControllerBase
     public async Task<IActionResult> CreateTransaction([FromBody] CreateTransactionRequestDto request)
     {
         var result = await _transactionEvaluationWorkflowService.ProcessTransactionAsync(request);
+
         return Ok(result);
     }
-
 
     [HttpGet("{transactionId:guid}/v1")]
     [ProducesResponseType(typeof(FraudEvaluationResultDto), StatusCodes.Status200OK)]
@@ -38,19 +51,19 @@ public class TransactionsController : ControllerBase
             return NotFound(new
             {
                 message = "Transaction or its evaluation was not found."
-            }
-            );
+            });
         }
+
         return Ok(transaction);
     }
-
-
 
     [HttpGet("flagged/v1")]
     [ProducesResponseType(typeof(List<TransactionEvaluationDetailsDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> GetFlaggedTransactions([FromQuery] int pageNumber = 1,[FromQuery] int pageSize = 10)
+    public async Task<IActionResult> GetFlaggedTransactions(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
     {
         const int maxPageSize = 100;
 
@@ -84,7 +97,6 @@ public class TransactionsController : ControllerBase
         return Ok(transactions);
     }
 
-
     [HttpGet("{transactionId:guid}/evaluation/v1")]
     [ProducesResponseType(typeof(FraudEvaluationDetailsDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -105,4 +117,24 @@ public class TransactionsController : ControllerBase
         return Ok(evaluation);
     }
 
+    // Record a new payment attempt for an existing transaction.
+    [HttpPost("{transactionId:guid}/payment-attempts/v1")]
+    [ProducesResponseType(typeof(PaymentAttemptProcessingResultDto),StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RecordPaymentAttempt(Guid transactionId)
+    {
+        try
+        {
+            var result = await _paymentAttemptEvaluationWorkflowService.RecordPaymentAttemptAsync(transactionId);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException exception)
+        {
+            return NotFound(new
+            {
+                message = exception.Message
+            });
+        }
+    }
 }
