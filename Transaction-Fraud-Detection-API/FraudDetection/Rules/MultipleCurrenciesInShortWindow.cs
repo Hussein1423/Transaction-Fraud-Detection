@@ -1,5 +1,6 @@
 ﻿using Transaction_Fraud_Detection_API.Models;
 using Transaction_Fraud_Detection_API.Enums;
+using Transaction_Fraud_Detection_API.FraudDetection.Interfaces;
 
 namespace Transaction_Fraud_Detection_API.FraudDetection.Rules
 {
