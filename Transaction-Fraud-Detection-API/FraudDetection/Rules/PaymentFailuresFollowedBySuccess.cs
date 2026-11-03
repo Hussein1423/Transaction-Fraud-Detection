@@ -11,7 +11,7 @@ namespace Transaction_Fraud_Detection_API.FraudDetection.Rules
             {
                 return new FraudRuleResult(false, 0);
             }
-            DateTimeOffset last30MintsAttempts = context.CurrentPaymentAttempt.AttemptedAt.AddMinutes(-30);
+            DateTimeOffset windowStart = context.CurrentPaymentAttempt.AttemptedAt.AddMinutes(-30);
 
             DateTimeOffset? lastSuccessfulAttemptAt = context.PreviousPaymentAttempts
             .Where(attempt => attempt.Transaction.UserId == context.CurrentPaymentAttempt.Transaction.UserId)
@@ -24,7 +24,7 @@ namespace Transaction_Fraud_Detection_API.FraudDetection.Rules
                 context.PreviousPaymentAttempts
                 .Where(attempt => attempt.Transaction.UserId == context.CurrentPaymentAttempt.Transaction.UserId)
                 .Where(attempt => lastSuccessfulAttemptAt == null || attempt.AttemptedAt > lastSuccessfulAttemptAt.Value)
-                .Where(attempt => attempt.AttemptedAt >= last30MintsAttempts && attempt.AttemptedAt < context.CurrentPaymentAttempt.AttemptedAt)
+                .Where(attempt => attempt.AttemptedAt >= windowStart && attempt.AttemptedAt < context.CurrentPaymentAttempt.AttemptedAt)
                 .Where(attempt => attempt.Status == PaymentAttemptStatus.Failed)
                 .Count();
             if(failedAttemptsCount >= 3)

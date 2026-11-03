@@ -78,6 +78,58 @@ namespace Transaction_Fraud_Detection_API.Migrations
                     b.ToTable("PaymentAttempts");
                 });
 
+            modelBuilder.Entity("Transaction_Fraud_Detection_API.Models.PaymentAttemptFraudEvaluation", b =>
+                {
+                    b.Property<Guid>("PaymentAttemptFraudEvaluationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Decision")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset>("EvaluatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("PaymentAttemptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("RiskScore")
+                        .HasColumnType("integer");
+
+                    b.HasKey("PaymentAttemptFraudEvaluationId");
+
+                    b.HasIndex("PaymentAttemptId")
+                        .IsUnique();
+
+                    b.ToTable("PaymentAttemptFraudEvaluations");
+                });
+
+            modelBuilder.Entity("Transaction_Fraud_Detection_API.Models.PaymentAttemptTriggeredRule", b =>
+                {
+                    b.Property<Guid>("PaymentAttemptTriggeredRuleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PaymentAttemptFraudEvaluationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("PointsAwarded")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RuleCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("PaymentAttemptTriggeredRuleId");
+
+                    b.HasIndex("PaymentAttemptFraudEvaluationId");
+
+                    b.ToTable("PaymentAttemptTriggeredRules");
+                });
+
             modelBuilder.Entity("Transaction_Fraud_Detection_API.Models.Transaction", b =>
                 {
                     b.Property<Guid>("TransactionId")
@@ -155,6 +207,28 @@ namespace Transaction_Fraud_Detection_API.Migrations
                         .IsRequired();
 
                     b.Navigation("Transaction");
+                });
+
+            modelBuilder.Entity("Transaction_Fraud_Detection_API.Models.PaymentAttemptFraudEvaluation", b =>
+                {
+                    b.HasOne("Transaction_Fraud_Detection_API.Models.PaymentAttempt", "PaymentAttempt")
+                        .WithOne()
+                        .HasForeignKey("Transaction_Fraud_Detection_API.Models.PaymentAttemptFraudEvaluation", "PaymentAttemptId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("PaymentAttempt");
+                });
+
+            modelBuilder.Entity("Transaction_Fraud_Detection_API.Models.PaymentAttemptTriggeredRule", b =>
+                {
+                    b.HasOne("Transaction_Fraud_Detection_API.Models.PaymentAttemptFraudEvaluation", "PaymentAttemptFraudEvaluation")
+                        .WithMany()
+                        .HasForeignKey("PaymentAttemptFraudEvaluationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PaymentAttemptFraudEvaluation");
                 });
 
             modelBuilder.Entity("Transaction_Fraud_Detection_API.Models.TriggeredRule", b =>
