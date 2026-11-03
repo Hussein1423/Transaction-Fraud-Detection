@@ -1,5 +1,4 @@
-﻿
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Transaction_Fraud_Detection_API.Data;
 using Transaction_Fraud_Detection_API.DTOs;
 using Transaction_Fraud_Detection_API.Enums;
@@ -8,29 +7,25 @@ using Transaction_Fraud_Detection_API.Models;
 
 namespace Transaction_Fraud_Detection_API;
 
-public class PaymentAttemptEvaluationWorkflowService
-    : IPaymentAttemptEvaluationWorkflowService
+public class PaymentAttemptEvaluationWorkflowService : IPaymentAttemptEvaluationWorkflowService
 {
     private readonly AppDbContext _context;
-    private readonly IEnumerable<IPaymentAttemptFraudRule> _fraudRules;
-
+    private readonly IPaymentAttemptFraudEvaluationService _fraudEvaluationService;
     public PaymentAttemptEvaluationWorkflowService(
         AppDbContext context,
-        IEnumerable<IPaymentAttemptFraudRule> fraudRules)
+        IPaymentAttemptFraudEvaluationService fraudEvaluationService)
     {
         _context = context;
-        _fraudRules = fraudRules;
+        _fraudEvaluationService = fraudEvaluationService;
     }
 
-    public async Task<PaymentAttemptProcessingResultDto> RecordPaymentAttemptAsync(
-        Guid transactionId)
+    public async Task<PaymentAttemptProcessingResultDto> RecordPaymentAttemptAsync(Guid transactionId)
     {
         // 1. Retrieve the transaction.
         var transaction = await GetTransactionAsync(transactionId);
 
         // 2. Create and save the payment attempt.
-        var paymentAttempt = await CreatePaymentAttemptAsync(
-            transaction);
+        var paymentAttempt = await CreatePaymentAttemptAsync(transaction);
 
         // 3. Failed attempts are recorded but not evaluated.
         if (paymentAttempt.Status == PaymentAttemptStatus.Failed)
@@ -39,9 +34,7 @@ public class PaymentAttemptEvaluationWorkflowService
         }
 
         // 4. Retrieve relevant previous attempts.
-        var previousAttempts = await GetPreviousPaymentAttemptsAsync(
-            transaction,
-            paymentAttempt);
+        var previousAttempts = await GetPreviousPaymentAttemptsAsync(transaction,paymentAttempt);
 
         // 5. Build the evaluation context.
         var evaluationContext = new PaymentAttemptEvaluationContext
@@ -51,7 +44,7 @@ public class PaymentAttemptEvaluationWorkflowService
         };
 
         // 6. Evaluate fraud rules.
-        var evaluationResult = EvaluatePaymentAttempt(evaluationContext);
+        var evaluationResult = _fraudEvaluationService.Evaluate(evaluationContext);
 
         // 7. Persist the evaluation and triggered rules.
         await SaveEvaluationAsync(paymentAttempt, evaluationResult);
@@ -159,42 +152,11 @@ public class PaymentAttemptEvaluationWorkflowService
             PaymentAttemptStatus.Succeeded,
             null);
     }
-    private PaymentAttemptEvaluationOutcome EvaluatePaymentAttempt(
-        PaymentAttemptEvaluationContext context)
-    {
-        int riskScore = 0;
-
-        var triggeredRules = new List<PaymentAttemptTriggeredRule>();
-
-        foreach (var rule in _fraudRules)
-        {
-            var result = rule.Evaluate(context);
-
-            if (!result.IsTriggered)
-                continue;
-
-            riskScore = Math.Min(100, riskScore + result.PointsAwarded);
-
-            triggeredRules.Add(new PaymentAttemptTriggeredRule
-            {
-                RuleCode = rule.RuleCode,
-                PointsAwarded = result.PointsAwarded
-            });
-        }
-
-        var decision = riskScore >= 50
-            ? FraudDecision.FlagForReview
-            : FraudDecision.Allow;
-
-        return new PaymentAttemptEvaluationOutcome(
-            riskScore,
-            decision,
-            triggeredRules);
-    }
+  
 
     private async Task SaveEvaluationAsync(
-        PaymentAttempt paymentAttempt,
-        PaymentAttemptEvaluationOutcome evaluationResult)
+     PaymentAttempt paymentAttempt,
+     FraudEvaluationResultDto evaluationResult)
     {
         var evaluation = new PaymentAttemptFraudEvaluation
         {
@@ -208,25 +170,27 @@ public class PaymentAttemptEvaluationWorkflowService
 
         await _context.SaveChangesAsync();
 
-        // Associate triggered rules with the saved evaluation.
-        foreach (var triggeredRule in evaluationResult.TriggeredRules)
-        {
-            triggeredRule.PaymentAttemptFraudEvaluationId =
-                evaluation.PaymentAttemptFraudEvaluationId;
-        }
+        // Map evaluation results to database entities.
+        var triggeredRules = evaluationResult.TriggeredRules
+            .Select(rule => new PaymentAttemptTriggeredRule
+            {
+                PaymentAttemptFraudEvaluationId =
+                    evaluation.PaymentAttemptFraudEvaluationId,
 
-        if (evaluationResult.TriggeredRules.Count > 0)
+                RuleCode = rule.RuleCode,
+                PointsAwarded = rule.PointsAwarded
+            })
+            .ToList();
+
+        if (triggeredRules.Count > 0)
         {
-            _context.PaymentAttemptTriggeredRules.AddRange(
-                evaluationResult.TriggeredRules);
+            _context.PaymentAttemptTriggeredRules.AddRange(triggeredRules);
 
             await _context.SaveChangesAsync();
         }
     }
 
-    private PaymentAttemptProcessingResultDto CreateResult(
-        PaymentAttempt paymentAttempt,
-        PaymentAttemptEvaluationOutcome? evaluationResult = null)
+    private PaymentAttemptProcessingResultDto CreateResult(PaymentAttempt paymentAttempt,FraudEvaluationResultDto? evaluationResult = null)
     {
         return new PaymentAttemptProcessingResultDto
         {
@@ -238,12 +202,5 @@ public class PaymentAttemptEvaluationWorkflowService
         };
     }
 
-    private sealed record PaymentAttemptEvaluationOutcome(
-        int RiskScore,
-        FraudDecision Decision,
-        List<PaymentAttemptTriggeredRule> TriggeredRules);
-
-    private sealed record SimulatedPaymentResult(
-    PaymentAttemptStatus Status,
-    string? FailureReason);
+    private sealed record SimulatedPaymentResult(PaymentAttemptStatus Status,string? FailureReason);
 }

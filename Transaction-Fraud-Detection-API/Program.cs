@@ -30,6 +30,7 @@ builder.Services.AddScoped<TransactionEvaluationWorkflowService>();
 
 
 builder.Services.AddScoped<IPaymentAttemptFraudRule, PaymentFailuresFollowedBySuccess>();
+builder.Services.AddScoped<IPaymentAttemptFraudEvaluationService, PaymentAttemptFraudEvaluationService>();
 builder.Services.AddScoped<IPaymentAttemptEvaluationWorkflowService,PaymentAttemptEvaluationWorkflowService>();
 
 
