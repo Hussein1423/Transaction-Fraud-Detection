@@ -1,8 +1,9 @@
 using Microsoft.EntityFrameworkCore;
-using Transaction_Fraud_Detection_API;
 using Transaction_Fraud_Detection_API.Data;
 using Transaction_Fraud_Detection_API.FraudDetection;
+using Transaction_Fraud_Detection_API.FraudDetection.Interfaces;
 using Transaction_Fraud_Detection_API.FraudDetection.Rules;
+using Transaction_Fraud_Detection_API.FraudDetection.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 

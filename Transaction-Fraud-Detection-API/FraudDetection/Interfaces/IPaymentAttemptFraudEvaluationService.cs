@@ -1,7 +1,7 @@
 ﻿using Transaction_Fraud_Detection_API.DTOs;
 using Transaction_Fraud_Detection_API.Models;
 
-namespace Transaction_Fraud_Detection_API.FraudDetection;
+namespace Transaction_Fraud_Detection_API.FraudDetection.Interfaces;
 
 public interface IPaymentAttemptFraudEvaluationService
 {

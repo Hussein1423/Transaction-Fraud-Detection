@@ -1,5 +1,5 @@
-﻿using Transaction_Fraud_Detection_API.FraudDetection;
-using Transaction_Fraud_Detection_API.Enums;
+﻿using Transaction_Fraud_Detection_API.Enums;
+using Transaction_Fraud_Detection_API.FraudDetection.Interfaces;
 namespace Transaction_Fraud_Detection_API.FraudDetection.Rules
 {
     public class PaymentFailuresFollowedBySuccess : IPaymentAttemptFraudRule

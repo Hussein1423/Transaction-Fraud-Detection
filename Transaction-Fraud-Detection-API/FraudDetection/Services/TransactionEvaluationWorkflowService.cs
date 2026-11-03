@@ -1,9 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Transaction_Fraud_Detection_API.Data;
 using Transaction_Fraud_Detection_API.DTOs;
+using Transaction_Fraud_Detection_API.FraudDetection.Interfaces;
 using Transaction_Fraud_Detection_API.Models;
 
-namespace Transaction_Fraud_Detection_API.FraudDetection;
+namespace Transaction_Fraud_Detection_API.FraudDetection.Services;
 
 public class TransactionEvaluationWorkflowService
 {

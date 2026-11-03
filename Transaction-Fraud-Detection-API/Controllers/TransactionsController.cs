@@ -1,8 +1,8 @@
 ﻿
 using Microsoft.AspNetCore.Mvc;
-using Transaction_Fraud_Detection_API;
 using Transaction_Fraud_Detection_API.DTOs;
-using Transaction_Fraud_Detection_API.FraudDetection;
+using Transaction_Fraud_Detection_API.FraudDetection.Interfaces;
+using Transaction_Fraud_Detection_API.FraudDetection.Services;
 
 namespace Transaction_Fraud_Detection_API.Controllers;
 
