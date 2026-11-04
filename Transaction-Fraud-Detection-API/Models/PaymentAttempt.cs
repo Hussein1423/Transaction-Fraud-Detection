@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Transaction_Fraud_Detection_API.Enums;
 
@@ -23,4 +24,10 @@ public class PaymentAttempt
 
     [ForeignKey(nameof(TransactionId))]
     public Transaction Transaction { get; set; } = null!;
+
+    [Precision(18, 2)]
+    public decimal Amount { get; set; }
+
+    [Required, StringLength(3, MinimumLength = 3)]
+    public string Currency { get; set; } = "SAR";
 }

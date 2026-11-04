@@ -62,6 +62,39 @@ namespace Transaction_Fraud_Detection_Test
             return transaction;
         }
 
+        [Fact]
+        public async Task RecordPaymentAttemptAsync_PreservesAmountAndCurrencySnapshots()
+        {
+            await using var dbContext = CreateDbContext();
+
+            var transaction = await CreateTransactionAsync(
+                dbContext,
+                currency: "SAR",
+                amount: 100);
+
+            var workflow = new PaymentAttemptEvaluationWorkflowService(
+                dbContext,
+                new FakePaymentAttemptFraudEvaluationService());
+
+            await workflow.RecordPaymentAttemptAsync(transaction.TransactionId);
+
+            // Change the transaction after the payment attempt was created.
+            transaction.Amount = 200;
+            transaction.Currency = "USD";
+
+            await dbContext.SaveChangesAsync();
+
+            // Read the payment attempt using a fresh DbContext.
+            await using var verificationContext = CreateDbContext();
+
+            var attempt = await verificationContext.PaymentAttempts
+                .AsNoTracking()
+                .SingleAsync(p => p.TransactionId == transaction.TransactionId);
+
+            Assert.Equal(100m, attempt.Amount);
+            Assert.Equal("SAR", attempt.Currency);
+        }
+
         // --------------------------------------------------
         // A. Payment Attempt Creation
         // --------------------------------------------------
@@ -343,6 +376,8 @@ namespace Transaction_Fraud_Detection_Test
             {
                 PaymentAttemptId = Guid.NewGuid(),
                 TransactionId = previousTransaction.TransactionId,
+                Currency = previousTransaction.Currency,
+                Amount = previousTransaction.Amount,
                 Status = PaymentAttemptStatus.Failed,
                 FailureReason = "Unsupported currency",
                 AttemptedAt = DateTimeOffset.UtcNow.AddMinutes(-5)
@@ -381,6 +416,8 @@ namespace Transaction_Fraud_Detection_Test
             {
                 PaymentAttemptId = Guid.NewGuid(),
                 TransactionId = anotherTransaction.TransactionId,
+                Currency = anotherTransaction.Currency,
+                Amount = anotherTransaction.Amount,
                 Status = PaymentAttemptStatus.Failed,
                 FailureReason = "Unsupported currency",
                 AttemptedAt = DateTimeOffset.UtcNow.AddMinutes(-5)

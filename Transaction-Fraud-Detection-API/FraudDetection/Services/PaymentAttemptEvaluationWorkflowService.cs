@@ -75,6 +75,8 @@ public class PaymentAttemptEvaluationWorkflowService : IPaymentAttemptEvaluation
         {
             TransactionId = transaction.TransactionId,
             Transaction = transaction,
+            Amount = transaction.Amount,
+            Currency = transaction.Currency,
             Status = simulatedPaymentResult.Status,
             FailureReason = simulatedPaymentResult.FailureReason,
             AttemptedAt = DateTimeOffset.UtcNow

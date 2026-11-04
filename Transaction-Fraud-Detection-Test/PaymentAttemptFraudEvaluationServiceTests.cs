@@ -234,7 +234,10 @@ namespace Transaction_Fraud_Detection_Test
                         Currency = "SAR",
                         MerchantId = "merchant-1",
                         Timestamp = DateTimeOffset.UtcNow
-                    }
+                    },
+                    Currency = "SAR",
+                    Amount = 100
+
                 }
             };
         }
