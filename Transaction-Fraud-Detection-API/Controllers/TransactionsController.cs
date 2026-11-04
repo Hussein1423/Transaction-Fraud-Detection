@@ -137,4 +137,36 @@ public class TransactionsController : ControllerBase
             });
         }
     }
+
+    [HttpPatch("{transactionId:guid}/v1")]
+    [ProducesResponseType(typeof(FraudEvaluationResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UpdateTransaction(
+    Guid transactionId,
+    [FromBody] UpdateTransactionRequestDto request)
+    {
+        try
+        {
+            var result = await _transactionEvaluationWorkflowService
+                .UpdateTransactionAsync(transactionId, request);
+
+            return Ok(result);
+        }
+        catch (KeyNotFoundException exception)
+        {
+            return NotFound(new
+            {
+                message = exception.Message
+            });
+        }
+        catch (InvalidOperationException exception)
+        {
+            return Conflict(new
+            {
+                message = exception.Message
+            });
+        }
+    }
 }

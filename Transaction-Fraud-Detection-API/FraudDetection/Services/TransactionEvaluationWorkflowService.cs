@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Transaction_Fraud_Detection_API.Data;
 using Transaction_Fraud_Detection_API.DTOs;
+using Transaction_Fraud_Detection_API.Enums;
 using Transaction_Fraud_Detection_API.FraudDetection.Interfaces;
 using Transaction_Fraud_Detection_API.Models;
 
@@ -203,5 +204,130 @@ public class TransactionEvaluationWorkflowService
             await dbTransaction.RollbackAsync();
             throw;
         }
+    }
+
+    public async Task<FraudEvaluationResultDto> UpdateTransactionAsync(
+    Guid transactionId,
+    UpdateTransactionRequestDto request)
+    {
+        await using var dbTransaction =
+            await _dbContext.Database.BeginTransactionAsync();
+
+        try
+        {
+            var transaction = await GetTransactionForUpdateAsync(transactionId);
+
+            await EnsureTransactionCanBeUpdatedAsync(transactionId);
+
+            var evaluation = await GetFraudEvaluationForUpdateAsync(transactionId);
+
+            ApplyTransactionUpdates(transaction, request);
+
+            var context = await BuildContextAsync(transaction);
+
+            var result = EvaluateTransaction(context);
+
+            UpdateFraudEvaluation(evaluation, result);
+
+            await ReplaceTriggeredRulesAsync(evaluation, result);
+
+            await _dbContext.SaveChangesAsync();
+
+            await dbTransaction.CommitAsync();
+
+            return result;
+        }
+        catch
+        {
+            await dbTransaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    private async Task<Transaction> GetTransactionForUpdateAsync(
+    Guid transactionId)
+    {
+        var transaction = await _dbContext.Transactions
+            .FirstOrDefaultAsync(t => t.TransactionId == transactionId);
+
+        if (transaction is null)
+        {
+            throw new KeyNotFoundException("Transaction was not found.");
+        }
+
+        return transaction;
+    }
+    private async Task EnsureTransactionCanBeUpdatedAsync(
+    Guid transactionId)
+    {
+        var hasSuccessfulAttempt = await _dbContext.PaymentAttempts
+            .AnyAsync(p =>
+                p.TransactionId == transactionId &&
+                p.Status == PaymentAttemptStatus.Succeeded);
+
+        if (hasSuccessfulAttempt)
+        {
+            throw new InvalidOperationException(
+                "A transaction cannot be updated after a successful payment attempt.");
+        }
+    }
+    private async Task<FraudEvaluation> GetFraudEvaluationForUpdateAsync(
+    Guid transactionId)
+    {
+        var evaluation = await _dbContext.FraudEvaluations
+            .FirstOrDefaultAsync(e => e.TransactionId == transactionId);
+
+        if (evaluation is null)
+        {
+            throw new KeyNotFoundException(
+                "Fraud evaluation for this transaction was not found.");
+        }
+
+        return evaluation;
+    }
+
+    private void ApplyTransactionUpdates(
+    Transaction transaction,
+    UpdateTransactionRequestDto request)
+    {
+        if (request.Amount.HasValue)
+        {
+            transaction.Amount = request.Amount.Value;
+        }
+
+        if (request.Currency is not null)
+        {
+            transaction.Currency = request.Currency;
+        }
+
+        transaction.UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    private void UpdateFraudEvaluation(
+    FraudEvaluation evaluation,
+    FraudEvaluationResultDto result)
+    {
+        evaluation.RiskScore = result.RiskScore;
+        evaluation.Decision = result.Decision;
+        evaluation.EvaluatedAt = DateTimeOffset.UtcNow;
+    }
+
+    private async Task ReplaceTriggeredRulesAsync(
+    FraudEvaluation evaluation,
+    FraudEvaluationResultDto result)
+    {
+        await _dbContext.TriggeredRules
+            .Where(r => r.FraudEvaluationId == evaluation.FraudEvaluationId)
+            .ExecuteDeleteAsync();
+
+        var triggeredRules = result.TriggeredRules.Select(rule =>
+            new TriggeredRule
+            {
+                FraudEvaluationId = evaluation.FraudEvaluationId,
+                RuleCode = rule.RuleCode,
+                PointsAwarded = rule.PointsAwarded
+            });
+
+        _dbContext.TriggeredRules.AddRange(triggeredRules);
     }
 }
