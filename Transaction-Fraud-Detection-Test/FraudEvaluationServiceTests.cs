@@ -6,6 +6,7 @@ using Xunit;
 
 namespace Transaction_Fraud_Detection_Test
 {
+    [Collection("SharedDatabase")]
     public class FraudEvaluationServiceTests
     {
         private sealed class FakeFraudRule : IFraudRule

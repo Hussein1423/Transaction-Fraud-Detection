@@ -91,8 +91,6 @@ namespace Transaction_Fraud_Detection_Test
 
             Assert.False(fraudService.WasCalled);
 
-            Assert.False(await dbContext.PaymentAttemptFraudEvaluations
-                .AnyAsync(e => e.PaymentAttemptId == attempt.PaymentAttemptId));
 
             var evaluation = await dbContext.PaymentAttemptFraudEvaluations
             .SingleOrDefaultAsync(e => e.PaymentAttemptId == attempt.PaymentAttemptId);
