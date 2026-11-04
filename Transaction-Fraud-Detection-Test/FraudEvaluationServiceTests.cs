@@ -1,10 +1,12 @@
-﻿
+﻿using Transaction_Fraud_Detection_API.FraudDetection.Services;
 using Transaction_Fraud_Detection_API.Enums;
 using Transaction_Fraud_Detection_API.FraudDetection;
+using Transaction_Fraud_Detection_API.FraudDetection.Interfaces;
 using Xunit;
 
 namespace Transaction_Fraud_Detection_Test
 {
+    [Collection("SharedDatabase")]
     public class FraudEvaluationServiceTests
     {
         private sealed class FakeFraudRule : IFraudRule

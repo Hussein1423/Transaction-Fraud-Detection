@@ -24,4 +24,6 @@ public class Transaction
     public string MerchantId { get; set; } = string.Empty;
 
     public DateTimeOffset Timestamp { get; set; }
+
+    public DateTimeOffset? UpdatedAt { get; set; }
 }

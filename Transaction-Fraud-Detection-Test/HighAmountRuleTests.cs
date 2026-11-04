@@ -4,6 +4,7 @@ using Xunit;
 
 namespace Transaction_Fraud_Detection_Test
 {
+    [Collection("SharedDatabase")]
     public class HighAmountRuleTests
     {
         [Theory]

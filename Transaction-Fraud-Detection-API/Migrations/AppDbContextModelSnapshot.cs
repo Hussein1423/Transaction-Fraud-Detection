@@ -50,6 +50,95 @@ namespace Transaction_Fraud_Detection_API.Migrations
                     b.ToTable("FraudEvaluations");
                 });
 
+            modelBuilder.Entity("Transaction_Fraud_Detection_API.Models.PaymentAttempt", b =>
+                {
+                    b.Property<Guid>("PaymentAttemptId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTimeOffset>("AttemptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("TransactionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("PaymentAttemptId");
+
+                    b.HasIndex("TransactionId");
+
+                    b.ToTable("PaymentAttempts");
+                });
+
+            modelBuilder.Entity("Transaction_Fraud_Detection_API.Models.PaymentAttemptFraudEvaluation", b =>
+                {
+                    b.Property<Guid>("PaymentAttemptFraudEvaluationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Decision")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset>("EvaluatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("PaymentAttemptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("RiskScore")
+                        .HasColumnType("integer");
+
+                    b.HasKey("PaymentAttemptFraudEvaluationId");
+
+                    b.HasIndex("PaymentAttemptId")
+                        .IsUnique();
+
+                    b.ToTable("PaymentAttemptFraudEvaluations");
+                });
+
+            modelBuilder.Entity("Transaction_Fraud_Detection_API.Models.PaymentAttemptTriggeredRule", b =>
+                {
+                    b.Property<Guid>("PaymentAttemptTriggeredRuleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PaymentAttemptFraudEvaluationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("PointsAwarded")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RuleCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("PaymentAttemptTriggeredRuleId");
+
+                    b.HasIndex("PaymentAttemptFraudEvaluationId");
+
+                    b.ToTable("PaymentAttemptTriggeredRules");
+                });
+
             modelBuilder.Entity("Transaction_Fraud_Detection_API.Models.Transaction", b =>
                 {
                     b.Property<Guid>("TransactionId")
@@ -71,6 +160,9 @@ namespace Transaction_Fraud_Detection_API.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.Property<DateTimeOffset>("Timestamp")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("UserId")
@@ -116,6 +208,39 @@ namespace Transaction_Fraud_Detection_API.Migrations
                         .IsRequired();
 
                     b.Navigation("Transaction");
+                });
+
+            modelBuilder.Entity("Transaction_Fraud_Detection_API.Models.PaymentAttempt", b =>
+                {
+                    b.HasOne("Transaction_Fraud_Detection_API.Models.Transaction", "Transaction")
+                        .WithMany()
+                        .HasForeignKey("TransactionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Transaction");
+                });
+
+            modelBuilder.Entity("Transaction_Fraud_Detection_API.Models.PaymentAttemptFraudEvaluation", b =>
+                {
+                    b.HasOne("Transaction_Fraud_Detection_API.Models.PaymentAttempt", "PaymentAttempt")
+                        .WithOne()
+                        .HasForeignKey("Transaction_Fraud_Detection_API.Models.PaymentAttemptFraudEvaluation", "PaymentAttemptId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("PaymentAttempt");
+                });
+
+            modelBuilder.Entity("Transaction_Fraud_Detection_API.Models.PaymentAttemptTriggeredRule", b =>
+                {
+                    b.HasOne("Transaction_Fraud_Detection_API.Models.PaymentAttemptFraudEvaluation", "PaymentAttemptFraudEvaluation")
+                        .WithMany()
+                        .HasForeignKey("PaymentAttemptFraudEvaluationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PaymentAttemptFraudEvaluation");
                 });
 
             modelBuilder.Entity("Transaction_Fraud_Detection_API.Models.TriggeredRule", b =>

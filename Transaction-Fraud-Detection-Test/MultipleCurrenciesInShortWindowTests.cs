@@ -7,6 +7,7 @@ using Xunit;
 
 namespace Transaction_Fraud_Detection_Test.FraudDetection.Rules;
 
+[Collection("SharedDatabase")]
 public class MultipleCurrenciesInShortWindowTests
 {
     private readonly MultipleCurrenciesInShortWindow _rule = new();

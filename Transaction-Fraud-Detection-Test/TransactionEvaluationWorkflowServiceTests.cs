@@ -4,12 +4,14 @@ using Npgsql;
 using Transaction_Fraud_Detection_API.Data;
 using Transaction_Fraud_Detection_API.DTOs;
 using Transaction_Fraud_Detection_API.Enums;
+using Transaction_Fraud_Detection_API.FraudDetection.Services;
 using Transaction_Fraud_Detection_API.FraudDetection;
+using Transaction_Fraud_Detection_API.FraudDetection.Interfaces;
 using Transaction_Fraud_Detection_API.Models;
-using Xunit;
 
 namespace Transaction_Fraud_Detection_Test.FraudDetection;
 
+[Collection("SharedDatabase")]
 public class TransactionEvaluationWorkflowServiceTests
 {
     [Fact]
@@ -319,11 +321,17 @@ public class TransactionEvaluationWorkflowServiceTests
                 $"Tests must not run against database '{databaseName}'.");
         }
 
-        dbContext.Database.EnsureCreated();
+        dbContext.Database.Migrate();
 
-        dbContext.TriggeredRules.RemoveRange(dbContext.TriggeredRules);
-        dbContext.FraudEvaluations.RemoveRange(dbContext.FraudEvaluations);
-        dbContext.Transactions.RemoveRange(dbContext.Transactions);
+        // الترتيب هنا مهم جداً: احذف التوابع (الأبناء) قبل الأصول (الآباء)
+        dbContext.PaymentAttemptTriggeredRules.RemoveRange(dbContext.PaymentAttemptTriggeredRules); // إذا كان لديك هذا الجدول
+    dbContext.PaymentAttemptFraudEvaluations.RemoveRange(dbContext.PaymentAttemptFraudEvaluations); // إذا كان لديك هذا الجدول
+    dbContext.PaymentAttempts.RemoveRange(dbContext.PaymentAttempts); // <-- تمت الإضافة هنا!
+    
+    dbContext.TriggeredRules.RemoveRange(dbContext.TriggeredRules);
+    dbContext.FraudEvaluations.RemoveRange(dbContext.FraudEvaluations);
+    
+    dbContext.Transactions.RemoveRange(dbContext.Transactions); // الآن يمكنك حذف هذا بأمان
 
         dbContext.SaveChanges();
 

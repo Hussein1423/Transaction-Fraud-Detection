@@ -7,5 +7,6 @@ public enum FraudRuleCode
     DuplicateLikeTransaction,
     IdenticalAmountAcrossMerchants,
     HighCumulativeSpending,
-    MultipleCurrenciesInShortWindow
+    MultipleCurrenciesInShortWindow,
+    PaymentFailuresFollowedBySuccess
 }
