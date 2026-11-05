@@ -182,6 +182,7 @@ public class PaymentAttemptEvaluationWorkflowService : IPaymentAttemptEvaluation
             TransactionId = transaction.TransactionId,
             Transaction = transaction,
             Amount = transaction.Amount,
+            PaymentInstrumentFingerprint = request.PaymentInstrumentFingerprint,
             Currency = transaction.Currency,
             Status = simulatedPaymentResult.Status,
             FailureReason = simulatedPaymentResult.FailureReason,
