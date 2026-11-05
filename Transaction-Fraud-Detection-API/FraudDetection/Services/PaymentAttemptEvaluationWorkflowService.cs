@@ -26,19 +26,20 @@ public class PaymentAttemptEvaluationWorkflowService : IPaymentAttemptEvaluation
         Transaction transaction = await GetTransactionAsync(transactionId);
 
         // 2. Create and save the payment attempt.
-        PaymentAttempt paymentAttempt =
-            await CreatePaymentAttemptAsync(transaction, request);
+        PaymentAttempt paymentAttempt = await CreatePaymentAttemptAsync(transaction, request);
 
-        // 3. Retrieve relevant previous attempts.
-        List<PaymentAttempt> previousAttempts =
-            await GetPreviousPaymentAttemptsAsync(transaction, paymentAttempt);
+        List<string> previousUserIdsWithSameInstrument = await GetPreviousUserIdsWithSameInstrumentAsync(paymentAttempt);
+
+        // 3. Retrieve previous failed attempts.
+        List<PaymentAttempt> previousFailedAttempts = await GetPreviousFailedAttemptsAsync(transaction, paymentAttempt);
 
         // 4. Build the evaluation context.
         PaymentAttemptEvaluationContext evaluationContext =
             new PaymentAttemptEvaluationContext
             {
                 CurrentPaymentAttempt = paymentAttempt,
-                PreviousPaymentAttempts = previousAttempts
+                PreviousFailedAttempts = previousFailedAttempts,
+                PreviousUserIdsWithSameInstrument = previousUserIdsWithSameInstrument
             };
 
         // 5. Evaluate payment-attempt fraud rules.
@@ -48,11 +49,9 @@ public class PaymentAttemptEvaluationWorkflowService : IPaymentAttemptEvaluation
         await SaveEvaluationAsync(paymentAttempt, evaluationResult);
 
         // 7. Retrieve both persisted evaluation results.
-        var transactionResult =
-            await GetTransactionFraudResultAsync(transactionId);
+        var transactionResult = await GetTransactionFraudResultAsync(transactionId);
 
-        var paymentAttemptResult =
-            await GetPaymentAttemptFraudResultAsync(paymentAttempt);
+        var paymentAttemptResult = await GetPaymentAttemptFraudResultAsync(paymentAttempt);
 
         // 8. Return the combined result.
         return CreateCombinedResult(transactionResult, paymentAttemptResult);
@@ -195,7 +194,23 @@ public class PaymentAttemptEvaluationWorkflowService : IPaymentAttemptEvaluation
         return paymentAttempt;
     }
 
-    private async Task<List<PaymentAttempt>> GetPreviousPaymentAttemptsAsync(Transaction transaction,PaymentAttempt currentPaymentAttempt)
+
+    private async Task<List<string>> GetPreviousUserIdsWithSameInstrumentAsync(PaymentAttempt currentPaymentAttempt)
+    {
+        var windowStart = currentPaymentAttempt.AttemptedAt.AddHours(-3);
+
+        return await _context.PaymentAttempts
+            .Where(p => p.PaymentInstrumentFingerprint == currentPaymentAttempt.PaymentInstrumentFingerprint)
+            .Where(p => p.Status == PaymentAttemptStatus.Succeeded)
+            .Where(p => p.AttemptedAt >= windowStart)
+            .Where(p => p.AttemptedAt < currentPaymentAttempt.AttemptedAt)
+            .Where(p => p.Transaction.UserId != currentPaymentAttempt.Transaction.UserId)
+            .Select(p => p.Transaction.UserId)
+            .Distinct()
+            .ToListAsync();
+    }
+
+    private async Task<List<PaymentAttempt>> GetPreviousFailedAttemptsAsync(Transaction transaction,PaymentAttempt currentPaymentAttempt)
     {
         // Find the latest previous successful attempt.
         var lastSuccessfulAttemptAt = await _context.PaymentAttempts
