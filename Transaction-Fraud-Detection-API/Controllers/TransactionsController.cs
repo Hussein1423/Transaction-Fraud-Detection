@@ -122,11 +122,11 @@ public class TransactionsController : ControllerBase
     [ProducesResponseType(typeof(CombinedFraudEvaluationResultDto),StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> RecordPaymentAttempt(Guid transactionId)
+    public async Task<IActionResult> RecordPaymentAttempt(Guid transactionId, [FromBody] PaymentAttemptRequestDto request)
     {
         try
         {
-            var result = await _paymentAttemptEvaluationWorkflowService.RecordPaymentAttemptAsync(transactionId);
+            var result = await _paymentAttemptEvaluationWorkflowService.RecordPaymentAttemptAsync(transactionId, request);
             return Ok(result);
         }
         catch (KeyNotFoundException exception)

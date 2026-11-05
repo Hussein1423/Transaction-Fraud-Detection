@@ -20,13 +20,13 @@ public class PaymentAttemptEvaluationWorkflowService : IPaymentAttemptEvaluation
         _fraudEvaluationService = fraudEvaluationService;
     }
 
-    public async Task<CombinedFraudEvaluationResultDto> RecordPaymentAttemptAsync(Guid transactionId)
+    public async Task<CombinedFraudEvaluationResultDto> RecordPaymentAttemptAsync(Guid transactionId, PaymentAttemptRequestDto request)
     {
         // 1. Retrieve the transaction.
         Transaction transaction = await GetTransactionAsync(transactionId);
 
         // 2. Create and save the payment attempt.
-        PaymentAttempt paymentAttempt = await CreatePaymentAttemptAsync(transaction);
+        PaymentAttempt paymentAttempt = await CreatePaymentAttemptAsync(transaction, request);
 
         // 3. Evaluate successful payment attempts only.
         if (paymentAttempt.Status == PaymentAttemptStatus.Succeeded)
@@ -174,7 +174,7 @@ public class PaymentAttemptEvaluationWorkflowService : IPaymentAttemptEvaluation
         return transaction;
     }
 
-    private async Task<PaymentAttempt> CreatePaymentAttemptAsync(Transaction transaction)
+    private async Task<PaymentAttempt> CreatePaymentAttemptAsync(Transaction transaction, PaymentAttemptRequestDto request)
     {
         SimulatedPaymentResult simulatedPaymentResult = SimulatePayment(transaction);
         var paymentAttempt = new PaymentAttempt
