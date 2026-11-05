@@ -30,4 +30,6 @@ public class PaymentAttempt
 
     [Required, StringLength(3, MinimumLength = 3)]
     public string Currency { get; set; } = "SAR";
+    [StringLength(64, MinimumLength = 64)]
+    public string? PaymentInstrumentFingerprint { get; set; }
 }
