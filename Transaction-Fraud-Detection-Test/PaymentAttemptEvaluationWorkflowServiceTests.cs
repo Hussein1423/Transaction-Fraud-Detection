@@ -59,6 +59,17 @@ namespace Transaction_Fraud_Detection_Test
             dbContext.Transactions.Add(transaction);
             await dbContext.SaveChangesAsync();
 
+            var evaluation = new FraudEvaluation
+            {
+                TransactionId = transaction.TransactionId,
+                RiskScore = 0,
+                Decision = FraudDecision.Allow,
+                EvaluatedAt = DateTimeOffset.UtcNow
+            };
+
+            dbContext.FraudEvaluations.Add(evaluation);
+            await dbContext.SaveChangesAsync();
+
             return transaction;
         }
 
@@ -102,6 +113,7 @@ namespace Transaction_Fraud_Detection_Test
         [Fact]
         public async Task RecordPaymentAttemptAsync_UnsupportedCurrency_SavesFailedAttemptWithoutEvaluation()
         {
+            // Arrange
             await using var dbContext = CreateDbContext();
 
             var transaction = await CreateTransactionAsync(
@@ -114,21 +126,169 @@ namespace Transaction_Fraud_Detection_Test
                 dbContext,
                 fraudService);
 
-            await workflow.RecordPaymentAttemptAsync(transaction.TransactionId);
+            // Act
+            var result = await workflow.RecordPaymentAttemptAsync(
+                transaction.TransactionId);
 
+            // Assert: Payment attempt
             var attempt = await dbContext.PaymentAttempts
                 .SingleAsync(p => p.TransactionId == transaction.TransactionId);
 
             Assert.Equal(PaymentAttemptStatus.Failed, attempt.Status);
             Assert.Equal("Unsupported currency", attempt.FailureReason);
 
+            // Assert: Fraud evaluation service was not called
             Assert.False(fraudService.WasCalled);
 
-
+            // Assert: No payment-attempt evaluation was persisted
             var evaluation = await dbContext.PaymentAttemptFraudEvaluations
-            .SingleOrDefaultAsync(e => e.PaymentAttemptId == attempt.PaymentAttemptId);
+                .SingleOrDefaultAsync(e => e.PaymentAttemptId == attempt.PaymentAttemptId);
 
             Assert.Null(evaluation);
+
+            // Assert: Transaction evaluation
+            Assert.Equal(transaction.TransactionId, result.Transaction.TransactionId);
+            Assert.Equal(0, result.Transaction.RiskScore);
+            Assert.Empty(result.Transaction.TriggeredRules);
+
+            // Assert: Payment-attempt evaluation
+            Assert.Equal(attempt.PaymentAttemptId, result.PaymentAttempt.PaymentAttemptId);
+            Assert.Equal(PaymentAttemptStatus.Failed, result.PaymentAttempt.Status);
+            Assert.Null(result.PaymentAttempt.RiskScore);
+            Assert.Empty(result.PaymentAttempt.TriggeredRules);
+
+            // Assert: Combined evaluation
+            Assert.Equal(0, result.TotalRiskScore);
+            Assert.Empty(result.CombinedTriggeredRules);
+            Assert.Equal(FraudDecision.Allow, result.FinalDecision);
+        }
+
+        [Fact]
+        public async Task RecordPaymentAttemptAsync_FailedAttempt_PreservesHighTransactionRiskScore()
+        {
+            // Arrange
+            await using var dbContext = CreateDbContext();
+
+            var transaction = await CreateTransactionAsync(
+                dbContext,
+                currency: "XYZ");
+
+            // Increase the existing transaction evaluation score.
+            var transactionEvaluation = await dbContext.FraudEvaluations
+                .SingleAsync(e => e.TransactionId == transaction.TransactionId);
+
+            transactionEvaluation.RiskScore = 60;
+            transactionEvaluation.Decision = FraudDecision.FlagForReview;
+
+            await dbContext.SaveChangesAsync();
+
+            var fraudService = new FakePaymentAttemptFraudEvaluationService();
+
+            var workflow = new PaymentAttemptEvaluationWorkflowService(
+                dbContext,
+                fraudService);
+
+            // Act
+            var result = await workflow.RecordPaymentAttemptAsync(
+                transaction.TransactionId);
+
+            // Assert: Payment attempt failed
+            Assert.Equal(PaymentAttemptStatus.Failed, result.PaymentAttempt.Status);
+
+            // Assert: Transaction evaluation is preserved
+            Assert.Equal(60, result.Transaction.RiskScore);
+            Assert.Equal(transaction.TransactionId, result.Transaction.TransactionId);
+
+            // Assert: Payment attempt was not evaluated
+            Assert.Null(result.PaymentAttempt.RiskScore);
+            Assert.Empty(result.PaymentAttempt.TriggeredRules);
+            Assert.False(fraudService.WasCalled);
+
+            // Assert: Combined evaluation
+            Assert.Equal(60, result.TotalRiskScore);
+            Assert.Empty(result.CombinedTriggeredRules);
+            Assert.Equal(FraudDecision.FlagForReview, result.FinalDecision);
+        }
+
+        [Fact]
+        public async Task RecordPaymentAttemptAsync_CombinesTransactionAndPaymentAttemptRiskScores()
+        {
+            // Arrange
+            await using var dbContext = CreateDbContext();
+
+            var transaction = await CreateTransactionAsync(dbContext);
+
+            // Configure the existing transaction evaluation.
+            var transactionEvaluation = await dbContext.FraudEvaluations
+                .SingleAsync(e => e.TransactionId == transaction.TransactionId);
+
+            transactionEvaluation.RiskScore = 30;
+            transactionEvaluation.Decision = FraudDecision.Allow;
+
+            // Add a triggered transaction rule.
+            dbContext.TriggeredRules.Add(new TriggeredRule
+            {
+                TriggeredRuleId = Guid.NewGuid(),
+                FraudEvaluationId = transactionEvaluation.FraudEvaluationId,
+                RuleCode = FraudRuleCode.HighAmount,
+                PointsAwarded = 30
+            });
+
+            await dbContext.SaveChangesAsync();
+
+            // Configure the payment-attempt evaluation.
+            var fraudService = new FakePaymentAttemptFraudEvaluationService
+            {
+                Result = new FraudEvaluationResultDto
+                {
+                    RiskScore = 40,
+                    Decision = FraudDecision.Allow,
+                    TriggeredRules = new List<TriggeredRuleResultDto>
+            {
+                new()
+                {
+                    RuleCode = FraudRuleCode.PaymentFailuresFollowedBySuccess,
+                    PointsAwarded = 40
+                }
+            }
+                }
+            };
+
+            var workflow = new PaymentAttemptEvaluationWorkflowService(
+                dbContext,
+                fraudService);
+
+            // Act
+            var result = await workflow.RecordPaymentAttemptAsync(
+                transaction.TransactionId);
+
+            // Assert: Individual evaluations
+            Assert.Equal(30, result.Transaction.RiskScore);
+            Assert.Single(result.Transaction.TriggeredRules);
+
+            Assert.Equal(40, result.PaymentAttempt.RiskScore);
+            Assert.Single(result.PaymentAttempt.TriggeredRules);
+
+            // Assert: Combined score
+            Assert.Equal(70, result.TotalRiskScore);
+
+            // Assert: Combined decision
+            Assert.Equal(FraudDecision.FlagForReview, result.FinalDecision);
+
+            // Assert: Combined triggered rules
+            Assert.Equal(2, result.CombinedTriggeredRules.Count);
+
+            Assert.Contains(
+                result.CombinedTriggeredRules,
+                rule => rule.RuleCode == FraudRuleCode.HighAmount
+                        && rule.PointsAwarded == 30
+                        && rule.Source == FraudEvaluationSource.Transaction);
+
+            Assert.Contains(
+                result.CombinedTriggeredRules,
+                rule => rule.RuleCode == FraudRuleCode.PaymentFailuresFollowedBySuccess
+                        && rule.PointsAwarded == 40
+                        && rule.Source == FraudEvaluationSource.PaymentAttempt);
         }
 
         [Theory]
@@ -259,59 +419,82 @@ namespace Transaction_Fraud_Detection_Test
         [Fact]
         public async Task RecordPaymentAttemptAsync_SuccessfulAttemptWithTriggeredRules_SavesEvaluationAndRules()
         {
+            // Arrange
             await using var dbContext = CreateDbContext();
 
-            var transaction = await CreateTransactionAsync(dbContext);
+            var transaction = await CreateTransactionAsync(dbContext, amount: 2000);
 
-            var fraudService = new FakePaymentAttemptFraudEvaluationService
+            var fakeEvaluationService = new FakePaymentAttemptFraudEvaluationService
             {
                 Result = new FraudEvaluationResultDto
                 {
                     RiskScore = 50,
                     Decision = FraudDecision.FlagForReview,
-                    TriggeredRules =
-                    {
-                        new TriggeredRuleResultDto
-                        {
-                            RuleCode = FraudRuleCode.PaymentFailuresFollowedBySuccess,
-                            PointsAwarded = 20
-                        },
-                        new TriggeredRuleResultDto
-                        {
-                            RuleCode = FraudRuleCode.HighAmount,
-                            PointsAwarded = 30
-                        }
-                    }
+                    TriggeredRules = new List<TriggeredRuleResultDto>
+            {
+                new()
+                {
+                    RuleCode = FraudRuleCode.PaymentFailuresFollowedBySuccess,
+                    PointsAwarded = 20
+                },
+                new()
+                {
+                    RuleCode = FraudRuleCode.HighAmount,
+                    PointsAwarded = 30
+                }
+            }
                 }
             };
 
             var workflow = new PaymentAttemptEvaluationWorkflowService(
                 dbContext,
-                fraudService);
+                fakeEvaluationService);
 
-            await workflow.RecordPaymentAttemptAsync(transaction.TransactionId);
+            // Act
+            var result = await workflow.RecordPaymentAttemptAsync(
+                transaction.TransactionId);
 
+            // Assert: Payment attempt
             var attempt = await dbContext.PaymentAttempts
-                .SingleAsync(p => p.TransactionId == transaction.TransactionId);
+                .SingleAsync(x => x.TransactionId == transaction.TransactionId);
 
+            Assert.Equal(PaymentAttemptStatus.Succeeded, attempt.Status);
+
+            // Assert: Persisted payment-attempt evaluation
             var evaluation = await dbContext.PaymentAttemptFraudEvaluations
-                .SingleAsync(e => e.PaymentAttemptId == attempt.PaymentAttemptId);
-
-            var triggeredRules = await dbContext.PaymentAttemptTriggeredRules
-                .Where(r =>
-                    r.PaymentAttemptFraudEvaluationId ==
-                    evaluation.PaymentAttemptFraudEvaluationId)
-                .ToListAsync();
-
-            Assert.True(fraudService.WasCalled);
+                .SingleAsync(x => x.PaymentAttemptId == attempt.PaymentAttemptId);
 
             Assert.Equal(50, evaluation.RiskScore);
             Assert.Equal(FraudDecision.FlagForReview, evaluation.Decision);
 
+            var triggeredRules = await dbContext.PaymentAttemptTriggeredRules
+                .Where(x => x.PaymentAttemptFraudEvaluationId == evaluation.PaymentAttemptFraudEvaluationId)
+                .ToListAsync();
+
             Assert.Equal(2, triggeredRules.Count);
-            Assert.Contains(triggeredRules, r =>
-                r.RuleCode == FraudRuleCode.PaymentFailuresFollowedBySuccess
-                && r.PointsAwarded == 20);
+
+            // Assert: Transaction evaluation in the returned result
+            Assert.Equal(transaction.TransactionId, result.Transaction.TransactionId);
+            Assert.Equal(0, result.Transaction.RiskScore);
+            Assert.Empty(result.Transaction.TriggeredRules);
+
+            // Assert: Payment-attempt evaluation in the returned result
+            Assert.Equal(attempt.PaymentAttemptId, result.PaymentAttempt.PaymentAttemptId);
+            Assert.Equal(PaymentAttemptStatus.Succeeded, result.PaymentAttempt.Status);
+            Assert.Equal(50, result.PaymentAttempt.RiskScore);
+            Assert.Equal(2, result.PaymentAttempt.TriggeredRules.Count);
+
+            // Assert: Combined evaluation
+            Assert.Equal(50, result.TotalRiskScore);
+            Assert.Equal(2, result.CombinedTriggeredRules.Count);
+            Assert.Equal(FraudDecision.FlagForReview, result.FinalDecision);
+
+            // Assert: Rule sources
+            Assert.All(
+                result.CombinedTriggeredRules,
+                rule => Assert.Equal(
+                    FraudEvaluationSource.PaymentAttempt,
+                    rule.Source));
         }
 
         [Fact]
