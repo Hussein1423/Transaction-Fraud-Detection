@@ -20,40 +20,146 @@ public class PaymentAttemptEvaluationWorkflowService : IPaymentAttemptEvaluation
         _fraudEvaluationService = fraudEvaluationService;
     }
 
-    public async Task<PaymentAttemptProcessingResultDto> RecordPaymentAttemptAsync(Guid transactionId)
+    public async Task<CombinedFraudEvaluationResultDto> RecordPaymentAttemptAsync(Guid transactionId)
     {
         // 1. Retrieve the transaction.
-        var transaction = await GetTransactionAsync(transactionId);
+        Transaction transaction = await GetTransactionAsync(transactionId);
 
         // 2. Create and save the payment attempt.
-        var paymentAttempt = await CreatePaymentAttemptAsync(transaction);
+        PaymentAttempt paymentAttempt = await CreatePaymentAttemptAsync(transaction);
 
-        // 3. Failed attempts are recorded but not evaluated.
-        if (paymentAttempt.Status == PaymentAttemptStatus.Failed)
+        // 3. Evaluate successful payment attempts only.
+        if (paymentAttempt.Status == PaymentAttemptStatus.Succeeded)
         {
-            return CreateResult(paymentAttempt);
+            // 4. Retrieve relevant previous attempts.
+            List<PaymentAttempt> previousAttempts = await GetPreviousPaymentAttemptsAsync(transaction,paymentAttempt);
+
+            // 5. Build the evaluation context.
+            PaymentAttemptEvaluationContext evaluationContext = new PaymentAttemptEvaluationContext
+            {
+                CurrentPaymentAttempt = paymentAttempt,
+                PreviousPaymentAttempts = previousAttempts
+            };
+
+            // 6. Evaluate payment-attempt fraud rules.
+            var evaluationResult = _fraudEvaluationService.Evaluate(evaluationContext);
+
+            // 7. Persist the payment-attempt evaluation.
+            await SaveEvaluationAsync(paymentAttempt, evaluationResult);
         }
 
-        // 4. Retrieve relevant previous attempts.
-        var previousAttempts = await GetPreviousPaymentAttemptsAsync(transaction,paymentAttempt);
+        // 8. Retrieve both persisted evaluation results.
+        var transactionResult =
+            await GetTransactionFraudResultAsync(transactionId);
 
-        // 5. Build the evaluation context.
-        var evaluationContext = new PaymentAttemptEvaluationContext
+        var paymentAttemptResult =
+            await GetPaymentAttemptFraudResultAsync(paymentAttempt);
+
+        // 9. Return the combined result.
+        return CreateCombinedResult(transactionResult, paymentAttemptResult);
+    }
+    private async Task<TransactionFraudResultDto> GetTransactionFraudResultAsync(Guid transactionId)
+    {
+        var evaluation = await _context.FraudEvaluations
+            .FirstOrDefaultAsync(e => e.TransactionId == transactionId);
+
+        if (evaluation is null)
         {
-            CurrentPaymentAttempt = paymentAttempt,
-            PreviousPaymentAttempts = previousAttempts
+            throw new InvalidOperationException(
+                "Fraud evaluation for this transaction was not found.");
+        }
+
+        var triggeredRules = await _context.TriggeredRules
+            .Where(r => r.FraudEvaluationId == evaluation.FraudEvaluationId)
+            .Select(r => new TriggeredRuleResultDto
+            {
+                RuleCode = r.RuleCode,
+                PointsAwarded = r.PointsAwarded
+            })
+            .ToListAsync();
+
+        return new TransactionFraudResultDto
+        {
+            TransactionId = evaluation.TransactionId,
+            RiskScore = evaluation.RiskScore,
+            TriggeredRules = triggeredRules
         };
-
-        // 6. Evaluate fraud rules.
-        var evaluationResult = _fraudEvaluationService.Evaluate(evaluationContext);
-
-        // 7. Persist the evaluation and triggered rules.
-        await SaveEvaluationAsync(paymentAttempt, evaluationResult);
-
-        // 8. Return the result.
-        return CreateResult(paymentAttempt, evaluationResult);
     }
 
+
+    private async Task<PaymentAttemptFraudResultDto> GetPaymentAttemptFraudResultAsync(PaymentAttempt paymentAttempt)
+    {
+        var evaluation = await _context.PaymentAttemptFraudEvaluations
+            .FirstOrDefaultAsync(e => e.PaymentAttemptId == paymentAttempt.PaymentAttemptId);
+
+        if (evaluation is null)
+        {
+            return new PaymentAttemptFraudResultDto
+            {
+                PaymentAttemptId = paymentAttempt.PaymentAttemptId,
+                Status = paymentAttempt.Status,
+                RiskScore = null,
+                TriggeredRules = new()
+            };
+        }
+
+        var triggeredRules = await _context.PaymentAttemptTriggeredRules
+            .Where(r => r.PaymentAttemptFraudEvaluationId ==
+                        evaluation.PaymentAttemptFraudEvaluationId)
+            .Select(r => new TriggeredRuleResultDto
+            {
+                RuleCode = r.RuleCode,
+                PointsAwarded = r.PointsAwarded
+            })
+            .ToListAsync();
+
+        return new PaymentAttemptFraudResultDto
+        {
+            PaymentAttemptId = paymentAttempt.PaymentAttemptId,
+            Status = paymentAttempt.Status,
+            RiskScore = evaluation.RiskScore,
+            TriggeredRules = triggeredRules
+        };
+    }
+
+    private CombinedFraudEvaluationResultDto CreateCombinedResult(TransactionFraudResultDto transactionResult,PaymentAttemptFraudResultDto paymentAttemptResult)
+    {
+        var combinedTriggeredRules = new List<CombinedTriggeredRuleResultDto>();
+
+        combinedTriggeredRules.AddRange(
+            transactionResult.TriggeredRules.Select(rule =>
+                new CombinedTriggeredRuleResultDto
+                {
+                    RuleCode = rule.RuleCode,
+                    PointsAwarded = rule.PointsAwarded,
+                    Source = FraudEvaluationSource.Transaction
+                }));
+
+        combinedTriggeredRules.AddRange(
+            paymentAttemptResult.TriggeredRules.Select(rule =>
+                new CombinedTriggeredRuleResultDto
+                {
+                    RuleCode = rule.RuleCode,
+                    PointsAwarded = rule.PointsAwarded,
+                    Source = FraudEvaluationSource.PaymentAttempt
+                }));
+
+        int totalRiskScore =
+            transactionResult.RiskScore + (paymentAttemptResult.RiskScore ?? 0);
+
+        var finalDecision = totalRiskScore >= 50
+            ? FraudDecision.FlagForReview
+            : FraudDecision.Allow;
+
+        return new CombinedFraudEvaluationResultDto
+        {
+            Transaction = transactionResult,
+            PaymentAttempt = paymentAttemptResult,
+            TotalRiskScore = totalRiskScore,
+            CombinedTriggeredRules = combinedTriggeredRules,
+            FinalDecision = finalDecision
+        };
+    }
     private async Task<Transaction> GetTransactionAsync(Guid transactionId)
     {
         var transaction = await _context.Transactions
@@ -89,9 +195,7 @@ public class PaymentAttemptEvaluationWorkflowService : IPaymentAttemptEvaluation
         return paymentAttempt;
     }
 
-    private async Task<List<PaymentAttempt>> GetPreviousPaymentAttemptsAsync(
-        Transaction transaction,
-        PaymentAttempt currentPaymentAttempt)
+    private async Task<List<PaymentAttempt>> GetPreviousPaymentAttemptsAsync(Transaction transaction,PaymentAttempt currentPaymentAttempt)
     {
         // Find the latest previous successful attempt.
         var lastSuccessfulAttemptAt = await _context.PaymentAttempts
