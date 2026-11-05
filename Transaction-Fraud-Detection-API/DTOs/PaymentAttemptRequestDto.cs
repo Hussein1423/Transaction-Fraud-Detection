@@ -5,6 +5,6 @@ namespace Transaction_Fraud_Detection_API.DTOs;
 public class PaymentAttemptRequestDto
 {
     [Required]
-    [StringLength(64, MinimumLength = 64)]
+    [StringLength(250, MinimumLength = 1)]
     public string PaymentInstrumentFingerprint { get; set; } = string.Empty;
 }

@@ -5,6 +5,8 @@ using Transaction_Fraud_Detection_API.Enums;
 using Transaction_Fraud_Detection_API.FraudDetection;
 using Transaction_Fraud_Detection_API.FraudDetection.Interfaces;
 using Transaction_Fraud_Detection_API.Models;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Transaction_Fraud_Detection_API.FraudDetection.Services;
 
@@ -18,6 +20,16 @@ public class PaymentAttemptEvaluationWorkflowService : IPaymentAttemptEvaluation
     {
         _context = context;
         _fraudEvaluationService = fraudEvaluationService;
+    }
+
+    private static string ComputeSha256Fingerprint(string value)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(value);
+
+        byte[] inputBytes = Encoding.UTF8.GetBytes(value);
+        byte[] hashBytes = SHA256.HashData(inputBytes);
+
+        return Convert.ToHexString(hashBytes);
     }
 
     public async Task<CombinedFraudEvaluationResultDto> RecordPaymentAttemptAsync(Guid transactionId,PaymentAttemptRequestDto request)
@@ -180,7 +192,7 @@ public class PaymentAttemptEvaluationWorkflowService : IPaymentAttemptEvaluation
             TransactionId = transaction.TransactionId,
             Transaction = transaction,
             Amount = transaction.Amount,
-            PaymentInstrumentFingerprint = request.PaymentInstrumentFingerprint,
+            PaymentInstrumentFingerprint = ComputeSha256Fingerprint(request.PaymentInstrumentFingerprint),
             Currency = transaction.Currency,
             Status = simulatedPaymentResult.Status,
             FailureReason = simulatedPaymentResult.FailureReason,
