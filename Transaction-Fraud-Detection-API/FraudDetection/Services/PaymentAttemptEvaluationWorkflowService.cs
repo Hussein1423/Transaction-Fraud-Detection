@@ -20,42 +20,41 @@ public class PaymentAttemptEvaluationWorkflowService : IPaymentAttemptEvaluation
         _fraudEvaluationService = fraudEvaluationService;
     }
 
-    public async Task<CombinedFraudEvaluationResultDto> RecordPaymentAttemptAsync(Guid transactionId, PaymentAttemptRequestDto request)
+    public async Task<CombinedFraudEvaluationResultDto> RecordPaymentAttemptAsync(Guid transactionId,PaymentAttemptRequestDto request)
     {
         // 1. Retrieve the transaction.
         Transaction transaction = await GetTransactionAsync(transactionId);
 
         // 2. Create and save the payment attempt.
-        PaymentAttempt paymentAttempt = await CreatePaymentAttemptAsync(transaction, request);
+        PaymentAttempt paymentAttempt =
+            await CreatePaymentAttemptAsync(transaction, request);
 
-        // 3. Evaluate successful payment attempts only.
-        if (paymentAttempt.Status == PaymentAttemptStatus.Succeeded)
-        {
-            // 4. Retrieve relevant previous attempts.
-            List<PaymentAttempt> previousAttempts = await GetPreviousPaymentAttemptsAsync(transaction,paymentAttempt);
+        // 3. Retrieve relevant previous attempts.
+        List<PaymentAttempt> previousAttempts =
+            await GetPreviousPaymentAttemptsAsync(transaction, paymentAttempt);
 
-            // 5. Build the evaluation context.
-            PaymentAttemptEvaluationContext evaluationContext = new PaymentAttemptEvaluationContext
+        // 4. Build the evaluation context.
+        PaymentAttemptEvaluationContext evaluationContext =
+            new PaymentAttemptEvaluationContext
             {
                 CurrentPaymentAttempt = paymentAttempt,
                 PreviousPaymentAttempts = previousAttempts
             };
 
-            // 6. Evaluate payment-attempt fraud rules.
-            var evaluationResult = _fraudEvaluationService.Evaluate(evaluationContext);
+        // 5. Evaluate payment-attempt fraud rules.
+        var evaluationResult = _fraudEvaluationService.Evaluate(evaluationContext);
 
-            // 7. Persist the payment-attempt evaluation.
-            await SaveEvaluationAsync(paymentAttempt, evaluationResult);
-        }
+        // 6. Persist the payment-attempt evaluation.
+        await SaveEvaluationAsync(paymentAttempt, evaluationResult);
 
-        // 8. Retrieve both persisted evaluation results.
+        // 7. Retrieve both persisted evaluation results.
         var transactionResult =
             await GetTransactionFraudResultAsync(transactionId);
 
         var paymentAttemptResult =
             await GetPaymentAttemptFraudResultAsync(paymentAttempt);
 
-        // 9. Return the combined result.
+        // 8. Return the combined result.
         return CreateCombinedResult(transactionResult, paymentAttemptResult);
     }
     private async Task<TransactionFraudResultDto> GetTransactionFraudResultAsync(Guid transactionId)
