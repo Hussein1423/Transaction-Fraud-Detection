@@ -119,7 +119,7 @@ public class TransactionsController : ControllerBase
 
     // Record a new payment attempt for an existing transaction.
     [HttpPost("{transactionId:guid}/payment-attempts/v1")]
-    [ProducesResponseType(typeof(PaymentAttemptProcessingResultDto),StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(CombinedFraudEvaluationResultDto),StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RecordPaymentAttempt(Guid transactionId)
