@@ -20,6 +20,8 @@ public class AppDbContext : DbContext
 
     public DbSet<PaymentAttempt> PaymentAttempts => Set<PaymentAttempt>();
 
+    public DbSet<AccountChangeEvent> AccountChangeEvents => Set<AccountChangeEvent>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -69,5 +71,13 @@ public class AppDbContext : DbContext
             .WithMany()
             .HasForeignKey(r => r.PaymentAttemptFraudEvaluationId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<AccountChangeEvent>()
+    .Property(e => e.Type)
+    .HasConversion<string>()
+    .HasMaxLength(20);
+
+        modelBuilder.Entity<AccountChangeEvent>()
+            .HasIndex(e => new { e.UserId, e.Time });
     }
 }
