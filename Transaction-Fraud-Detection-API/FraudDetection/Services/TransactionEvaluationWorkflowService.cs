@@ -53,17 +53,41 @@ public class TransactionEvaluationWorkflowService
     private async Task<FraudEvaluationContext> BuildContextAsync(Transaction transaction)
     {
         var previousTransactions = await GetPreviousTransactionsAsync(transaction);
+        var recentAccountChangeEvents = await GetRecentAccountChangeEventsAsync(transaction);
 
         return new FraudEvaluationContext
         {
             CurrentTransaction = transaction,
-            PreviousTransactions = previousTransactions
+            PreviousTransactions = previousTransactions,
+            RecentAccountChangeEvents = recentAccountChangeEvents
         };
     }
 
     private FraudEvaluationResultDto EvaluateTransaction(FraudEvaluationContext context)
     {
         return _fraudEvaluationService.Evaluate(context);
+    }
+
+    private async Task<List<(AccountChangeType Type, DateTimeOffset Time)>> GetRecentAccountChangeEventsAsync(Transaction transaction)
+    {
+        var oneHourAgo = transaction.Timestamp.AddHours(-1);
+
+        var events = await _dbContext.AccountChangeEvents
+            .AsNoTracking()
+            .Where(e =>
+                e.UserId == transaction.UserId &&
+                e.Time >= oneHourAgo &&
+                e.Time < transaction.Timestamp)
+            .Select(e => new
+            {
+                e.Type,
+                e.Time
+            })
+            .ToListAsync();
+
+        return events
+            .Select(e => (e.Type, e.Time))
+            .ToList();
     }
 
     private async Task<FraudEvaluation> SaveEvaluationAsync(Transaction transaction,FraudEvaluationResultDto result)

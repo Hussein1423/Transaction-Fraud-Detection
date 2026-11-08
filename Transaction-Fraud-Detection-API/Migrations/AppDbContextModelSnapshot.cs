@@ -22,6 +22,32 @@ namespace Transaction_Fraud_Detection_API.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Transaction_Fraud_Detection_API.Models.AccountChangeEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("Time")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Time");
+
+                    b.ToTable("AccountChangeEvents");
+                });
+
             modelBuilder.Entity("Transaction_Fraud_Detection_API.Models.FraudEvaluation", b =>
                 {
                     b.Property<Guid>("FraudEvaluationId")
