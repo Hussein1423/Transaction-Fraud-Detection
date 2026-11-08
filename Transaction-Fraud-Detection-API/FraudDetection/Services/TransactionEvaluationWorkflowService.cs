@@ -1,8 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using System.Net;
 using Transaction_Fraud_Detection_API.Data;
 using Transaction_Fraud_Detection_API.DTOs;
 using Transaction_Fraud_Detection_API.Enums;
 using Transaction_Fraud_Detection_API.FraudDetection.Interfaces;
+using Transaction_Fraud_Detection_API.Interfaces;
 using Transaction_Fraud_Detection_API.Models;
 
 namespace Transaction_Fraud_Detection_API.FraudDetection.Services;
@@ -11,24 +13,27 @@ public class TransactionEvaluationWorkflowService
 {
     private readonly AppDbContext _dbContext;
     private readonly IFraudEvaluationService _fraudEvaluationService;
+    private readonly ITransactionLocationService _transactionLocationService;
 
-    public TransactionEvaluationWorkflowService(AppDbContext dbContext,IFraudEvaluationService fraudEvaluationService)
+    public TransactionEvaluationWorkflowService(AppDbContext dbContext,IFraudEvaluationService fraudEvaluationService, ITransactionLocationService transactionLocationService)
     {
         _dbContext = dbContext;
         _fraudEvaluationService = fraudEvaluationService;
+        _transactionLocationService = transactionLocationService;
     }
 
-    private Transaction CreateTransaction(CreateTransactionRequestDto request)
+    private Transaction CreateTransaction(CreateTransactionRequestDto request,TransactionLocation? location)
     {
-        var transaction = new Transaction
+        return new Transaction
         {
             UserId = request.UserId,
             Amount = request.Amount,
             Currency = request.Currency,
             MerchantId = request.MerchantId,
-            Timestamp = DateTimeOffset.UtcNow
+            Timestamp = DateTimeOffset.UtcNow,
+            City = location?.City,
+            Country = location?.Country
         };
-        return transaction;
     }
 
     private async Task<Transaction> SaveTransactionAsync(Transaction transaction)
@@ -202,12 +207,14 @@ public class TransactionEvaluationWorkflowService
 
         return evaluation;
     }
-    public async Task<FraudEvaluationResultDto> ProcessTransactionAsync(CreateTransactionRequestDto request)
+    public async Task<FraudEvaluationResultDto> ProcessTransactionAsync(CreateTransactionRequestDto request, IPAddress? ipAddress)
     {
         await using var dbTransaction =  await _dbContext.Database.BeginTransactionAsync();
         try
         {
-            var transaction = CreateTransaction(request);
+            var location = _transactionLocationService.Resolve(ipAddress);
+
+            var transaction = CreateTransaction(request, location);
 
             await SaveTransactionAsync(transaction);
 
