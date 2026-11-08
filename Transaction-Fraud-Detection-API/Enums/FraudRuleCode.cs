@@ -10,5 +10,6 @@ public enum FraudRuleCode
     MultipleCurrenciesInShortWindow,
     PaymentFailuresFollowedBySuccess,
     SharedPaymentInstrumentAcrossUsers,
-    TransactionAfterAccountDetailsChange
+    TransactionAfterAccountDetailsChange,
+    UnusualTransactionLocation
 }
