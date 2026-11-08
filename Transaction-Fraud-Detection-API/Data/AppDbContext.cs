@@ -79,5 +79,8 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<AccountChangeEvent>()
             .HasIndex(e => new { e.UserId, e.Time });
+
+        modelBuilder.Entity<Transaction>()
+    .HasIndex(t => new { t.UserId, t.Timestamp });
     }
 }
