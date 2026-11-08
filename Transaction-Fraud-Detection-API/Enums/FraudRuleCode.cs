@@ -9,5 +9,6 @@ public enum FraudRuleCode
     HighCumulativeSpending,
     MultipleCurrenciesInShortWindow,
     PaymentFailuresFollowedBySuccess,
-    SharedPaymentInstrumentAcrossUsers
+    SharedPaymentInstrumentAcrossUsers,
+    TransactionAfterAccountDetailsChange
 }
