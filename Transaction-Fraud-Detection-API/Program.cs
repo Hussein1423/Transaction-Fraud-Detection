@@ -27,6 +27,7 @@ builder.Services.AddScoped<IFraudRule, DuplicateLikeTransactionRule>();
 builder.Services.AddScoped<IFraudRule, IdenticalAmountAcrossMerchantsRule>();
 builder.Services.AddScoped<IFraudRule, HighCumulativeSpending>();
 builder.Services.AddScoped<IFraudRule, MultipleCurrenciesInShortWindow>();
+builder.Services.AddScoped<IFraudRule, TransactionAfterAccountDetailsChangeRule>();
 builder.Services.AddScoped<TransactionEvaluationWorkflowService>();
 
 
