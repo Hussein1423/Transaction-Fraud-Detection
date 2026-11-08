@@ -53,11 +53,13 @@ public class TransactionEvaluationWorkflowService
     private async Task<FraudEvaluationContext> BuildContextAsync(Transaction transaction)
     {
         var previousTransactions = await GetPreviousTransactionsAsync(transaction);
+        var recentAccountChangeEvents = await GetRecentAccountChangeEventsAsync(transaction);
 
         return new FraudEvaluationContext
         {
             CurrentTransaction = transaction,
-            PreviousTransactions = previousTransactions
+            PreviousTransactions = previousTransactions,
+            RecentAccountChangeEvents = recentAccountChangeEvents
         };
     }
 
