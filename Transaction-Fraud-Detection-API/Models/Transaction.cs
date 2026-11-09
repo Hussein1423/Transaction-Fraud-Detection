@@ -23,6 +23,12 @@ public class Transaction
     [MaxLength(100)]
     public string MerchantId { get; set; } = string.Empty;
 
+    [MaxLength(100)]
+    public string? City { get; set; }
+
+    [MaxLength(100)]
+    public string? Country { get; set; }
+
     public DateTimeOffset Timestamp { get; set; }
 
     public DateTimeOffset? UpdatedAt { get; set; }

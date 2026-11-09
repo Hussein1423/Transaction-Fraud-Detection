@@ -17,35 +17,30 @@ namespace Transaction_Fraud_Detection_Test
             {
                 new object[]
                 {
-                    "No account changes",
                     Array.Empty<AccountChangeType>(),
                     false,
                     0
                 },
                 new object[]
                 {
-                    "Email only",
                     new[] { AccountChangeType.EmailAddress },
                     true,
                     20
                 },
                 new object[]
                 {
-                    "Phone only",
                     new[] { AccountChangeType.PhoneNumber },
                     true,
                     30
                 },
                 new object[]
                 {
-                    "Password only",
                     new[] { AccountChangeType.Password },
                     true,
                     35
                 },
                 new object[]
                 {
-                    "Password repeated three times",
                     new[]
                     {
                         AccountChangeType.Password,
@@ -57,7 +52,6 @@ namespace Transaction_Fraud_Detection_Test
                 },
                 new object[]
                 {
-                    "Phone and Email",
                     new[]
                     {
                         AccountChangeType.PhoneNumber,
@@ -68,7 +62,6 @@ namespace Transaction_Fraud_Detection_Test
                 },
                 new object[]
                 {
-                    "Password and Email",
                     new[]
                     {
                         AccountChangeType.Password,
@@ -79,7 +72,6 @@ namespace Transaction_Fraud_Detection_Test
                 },
                 new object[]
                 {
-                    "Password and Phone",
                     new[]
                     {
                         AccountChangeType.Password,
@@ -90,7 +82,6 @@ namespace Transaction_Fraud_Detection_Test
                 },
                 new object[]
                 {
-                    "All three account change types",
                     new[]
                     {
                         AccountChangeType.EmailAddress,
@@ -105,7 +96,6 @@ namespace Transaction_Fraud_Detection_Test
         [Theory]
         [MemberData(nameof(ScoringTestCases))]
         public void Evaluate_AccountChanges_ReturnsExpectedResult(
-            string testCase,
             AccountChangeType[] eventTypes,
             bool expectedIsTriggered,
             int expectedPoints)
@@ -130,6 +120,7 @@ namespace Transaction_Fraud_Detection_Test
             // Assert
             Assert.Equal(expectedIsTriggered, result.IsTriggered);
             Assert.Equal(expectedPoints, result.PointsAwarded);
+            
         }
 
         [Fact]

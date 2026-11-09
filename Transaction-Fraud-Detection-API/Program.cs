@@ -1,13 +1,23 @@
+using MaxMind.GeoIP2;
 using Microsoft.EntityFrameworkCore;
 using Transaction_Fraud_Detection_API.Data;
 using Transaction_Fraud_Detection_API.FraudDetection;
 using Transaction_Fraud_Detection_API.FraudDetection.Interfaces;
 using Transaction_Fraud_Detection_API.FraudDetection.Rules;
 using Transaction_Fraud_Detection_API.FraudDetection.Services;
+using Transaction_Fraud_Detection_API.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+
+var geoIpDatabasePath = builder.Configuration["GeoIP:DatabasePath"]
+    ?? throw new InvalidOperationException(
+        "GeoIP database path is not configured.");
+
+var fullGeoIpDatabasePath = Path.Combine(
+    builder.Environment.ContentRootPath,
+    geoIpDatabasePath);
 
 builder.Services
     .AddControllers()
@@ -20,6 +30,8 @@ builder.Services
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IFraudEvaluationService, FraudEvaluationService>();
+builder.Services.AddSingleton<DatabaseReader>(_ => new DatabaseReader(fullGeoIpDatabasePath));
+builder.Services.AddScoped<ITransactionLocationService, TransactionLocationService>();
 
 builder.Services.AddScoped<IFraudRule, HighAmountRule>();
 builder.Services.AddScoped<IFraudRule, HighVelocityRule>();
@@ -28,6 +40,7 @@ builder.Services.AddScoped<IFraudRule, IdenticalAmountAcrossMerchantsRule>();
 builder.Services.AddScoped<IFraudRule, HighCumulativeSpending>();
 builder.Services.AddScoped<IFraudRule, MultipleCurrenciesInShortWindow>();
 builder.Services.AddScoped<IFraudRule, TransactionAfterAccountDetailsChangeRule>();
+builder.Services.AddScoped<IFraudRule, UnusualTransactionLocationRule>();
 builder.Services.AddScoped<TransactionEvaluationWorkflowService>();
 
 

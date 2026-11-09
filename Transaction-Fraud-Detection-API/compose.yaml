@@ -1,4 +1,5 @@
-﻿services:
+﻿
+services:
   postgres:
     image: postgres:17
     container_name: transaction-fraud-db
@@ -11,6 +12,18 @@
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  geoipupdate:
+    image: ghcr.io/maxmind/geoipupdate
+    container_name: transaction-fraud-geoip-update
+    restart: unless-stopped
+    environment:
+      GEOIPUPDATE_ACCOUNT_ID: ${MAXMIND_ACCOUNT_ID:?MAXMIND_ACCOUNT_ID is required}
+      GEOIPUPDATE_LICENSE_KEY: ${MAXMIND_LICENSE_KEY:?MAXMIND_LICENSE_KEY is required}
+      GEOIPUPDATE_EDITION_IDS: GeoLite2-City
+      GEOIPUPDATE_FREQUENCY: 72
+    volumes:
+      - ./data/geoip:/usr/share/GeoIP
 
 volumes:
   postgres_data:

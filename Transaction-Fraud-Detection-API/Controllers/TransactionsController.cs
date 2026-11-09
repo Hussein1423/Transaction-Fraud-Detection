@@ -1,5 +1,6 @@
 ﻿
 using Microsoft.AspNetCore.Mvc;
+using System.Net;
 using Transaction_Fraud_Detection_API.DTOs;
 using Transaction_Fraud_Detection_API.FraudDetection.Interfaces;
 using Transaction_Fraud_Detection_API.FraudDetection.Services;
@@ -32,7 +33,9 @@ public class TransactionsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateTransaction([FromBody] CreateTransactionRequestDto request)
     {
-        var result = await _transactionEvaluationWorkflowService.ProcessTransactionAsync(request);
+        //var ipAddress = IPAddress.Parse("8.8.8.8");
+        var ipAddress = HttpContext.Connection.RemoteIpAddress;
+        var result = await _transactionEvaluationWorkflowService.ProcessTransactionAsync(request, ipAddress);
 
         return Ok(result);
     }

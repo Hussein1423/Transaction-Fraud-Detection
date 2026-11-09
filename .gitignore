@@ -438,3 +438,6 @@ Transaction-Fraud-Detection-API/appsettings.Development.json
 # Postman
 **/postman/
 **/.postman/
+
+# GeoIP database files
+/Transaction-Fraud-Detection-API/data/geoip/

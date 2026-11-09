@@ -179,6 +179,14 @@ namespace Transaction_Fraud_Detection_API.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
+                    b.Property<string>("City")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Country")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(3)
@@ -201,6 +209,8 @@ namespace Transaction_Fraud_Detection_API.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.HasKey("TransactionId");
+
+                    b.HasIndex("UserId", "Timestamp");
 
                     b.ToTable("Transactions");
                 });

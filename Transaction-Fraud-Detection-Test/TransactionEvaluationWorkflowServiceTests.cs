@@ -1,12 +1,14 @@
 ﻿
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using System.Net;
 using Transaction_Fraud_Detection_API.Data;
 using Transaction_Fraud_Detection_API.DTOs;
 using Transaction_Fraud_Detection_API.Enums;
-using Transaction_Fraud_Detection_API.FraudDetection.Services;
 using Transaction_Fraud_Detection_API.FraudDetection;
 using Transaction_Fraud_Detection_API.FraudDetection.Interfaces;
+using Transaction_Fraud_Detection_API.FraudDetection.Services;
+using Transaction_Fraud_Detection_API.Interfaces;
 using Transaction_Fraud_Detection_API.Models;
 
 namespace Transaction_Fraud_Detection_Test.FraudDetection;
@@ -29,12 +31,12 @@ public class TransactionEvaluationWorkflowServiceTests
 
         var workflow = new TransactionEvaluationWorkflowService(
             dbContext,
-            fraudEvaluationService);
+            fraudEvaluationService, new FakeTransactionLocationService());
 
         var request = CreateRequest();
 
         // Act
-        var result = await workflow.ProcessTransactionAsync(request);
+        var result = await workflow.ProcessTransactionAsync(request, IPAddress.Loopback);
 
         // Assert
         var savedTransaction = await dbContext.Transactions.SingleAsync();
@@ -82,12 +84,12 @@ public class TransactionEvaluationWorkflowServiceTests
 
         var workflow = new TransactionEvaluationWorkflowService(
             dbContext,
-            fraudEvaluationService);
+            fraudEvaluationService, new FakeTransactionLocationService());
 
         var request = CreateRequest();
 
         // Act
-        await workflow.ProcessTransactionAsync(request);
+        await workflow.ProcessTransactionAsync(request, IPAddress.Loopback);
 
         // Assert
         Assert.NotNull(fraudEvaluationService.ReceivedContext);
@@ -116,10 +118,10 @@ public class TransactionEvaluationWorkflowServiceTests
 
         var workflow = new TransactionEvaluationWorkflowService(
             dbContext,
-            fraudEvaluationService);
+            fraudEvaluationService, new FakeTransactionLocationService());
 
         // Act
-        var result = await workflow.ProcessTransactionAsync(CreateRequest());
+        var result = await workflow.ProcessTransactionAsync(CreateRequest(), IPAddress.Loopback);
 
         // Assert
         var savedEvaluation = await dbContext.FraudEvaluations.SingleAsync();
@@ -157,10 +159,10 @@ public class TransactionEvaluationWorkflowServiceTests
 
         var workflow = new TransactionEvaluationWorkflowService(
             dbContext,
-            fraudEvaluationService);
+            fraudEvaluationService, new FakeTransactionLocationService());
 
         // Act
-        await workflow.ProcessTransactionAsync(CreateRequest());
+        await workflow.ProcessTransactionAsync(CreateRequest(), IPAddress.Loopback);
 
         // Assert
         var evaluation = await dbContext.FraudEvaluations.SingleAsync();
@@ -262,7 +264,7 @@ public class TransactionEvaluationWorkflowServiceTests
         var workflow = new TransactionEvaluationWorkflowService(
             dbContext,
             new FakeFraudEvaluationService(
-                new FraudEvaluationResultDto()));
+                new FraudEvaluationResultDto()), new FakeTransactionLocationService());
 
         // Act
         var result = await workflow.GetFlaggedTransactionsAsync();
@@ -347,6 +349,25 @@ public class TransactionEvaluationWorkflowServiceTests
             Currency = "SAR",
             MerchantId = "merchant-1"
         };
+    }
+
+    private sealed class FakeTransactionLocationService : ITransactionLocationService
+    {
+        private readonly TransactionLocation? _location;
+
+        public IPAddress? ReceivedIpAddress { get; private set; }
+
+        public FakeTransactionLocationService(
+            TransactionLocation? location = null)
+        {
+            _location = location;
+        }
+
+        public TransactionLocation? Resolve(IPAddress? ipAddress)
+        {
+            ReceivedIpAddress = ipAddress;
+            return _location;
+        }
     }
 
     private sealed class FakeFraudEvaluationService
