@@ -18,7 +18,6 @@ namespace Transaction_Fraud_Detection_API.FraudDetection
             DateTimeOffset currentTimestamp = context.CurrentTransaction.Timestamp;
 
             var transactions = context.PreviousTransactions
-                .Where(t => t.UserId == context.CurrentTransaction.UserId)
                 .Where(t => t.Currency == "SAR")
                 .Where(t => t.Timestamp <= currentTimestamp)
                 .Append(context.CurrentTransaction)

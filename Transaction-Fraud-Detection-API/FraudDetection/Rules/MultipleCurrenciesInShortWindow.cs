@@ -15,10 +15,7 @@ namespace Transaction_Fraud_Detection_API.FraudDetection.Rules
             DateTimeOffset tenMinutesAgo = currentTransaction.Timestamp.AddMinutes(-10);
 
             List<Transaction> transactions = context.PreviousTransactions
-                .Where(t =>
-                    t.UserId == currentTransaction.UserId &&
-                    t.Timestamp >= tenMinutesAgo &&
-                    t.Timestamp <= currentTransaction.Timestamp)
+                .Where(t => t.Timestamp >= tenMinutesAgo && t.Timestamp <= currentTransaction.Timestamp)
                 .Append(currentTransaction)
                 .ToList();
 

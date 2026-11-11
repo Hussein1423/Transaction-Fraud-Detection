@@ -22,9 +22,7 @@ public class UnusualTransactionLocationRule : IFraudRule
         var twoHoursAgo = currentTransaction.Timestamp.AddHours(-2);
 
         var hasDifferentLocation = context.PreviousTransactions
-            .Where(t => t.UserId == currentTransaction.UserId)
-            .Where(t => t.Timestamp >= twoHoursAgo &&
-                        t.Timestamp < currentTransaction.Timestamp)
+            .Where(t => t.Timestamp >= twoHoursAgo &&  t.Timestamp < currentTransaction.Timestamp)
             // Ignore previous transactions with no location at all.
             .Where(t => !string.IsNullOrWhiteSpace(t.City) ||
                         !string.IsNullOrWhiteSpace(t.Country))

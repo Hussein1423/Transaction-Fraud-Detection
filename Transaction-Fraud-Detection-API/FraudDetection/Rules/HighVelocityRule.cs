@@ -9,7 +9,6 @@ namespace Transaction_Fraud_Detection_API.FraudDetection
         {
             DateTimeOffset windowStart = context.CurrentTransaction.Timestamp.AddMinutes(-10);
             int transactionsInLastTenMinutes = context.PreviousTransactions
-                .Where(t => t.UserId == context.CurrentTransaction.UserId)
                 .Where(t =>  t.Timestamp >= windowStart && t.Timestamp <= context.CurrentTransaction.Timestamp)
                 .Count();
             transactionsInLastTenMinutes++; // Include the current transaction in the count

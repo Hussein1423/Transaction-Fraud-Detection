@@ -10,7 +10,6 @@ namespace Transaction_Fraud_Detection_API.FraudDetection
             DateTimeOffset windowStart = context.CurrentTransaction.Timestamp.AddMinutes(-5);
 
             var transactionsInWindow = context.PreviousTransactions
-                .Where(t => t.UserId == context.CurrentTransaction.UserId)
                 .Where(t => t.Currency == context.CurrentTransaction.Currency)
                 .Where(t => t.Timestamp >= windowStart &&
                             t.Timestamp <= context.CurrentTransaction.Timestamp)
