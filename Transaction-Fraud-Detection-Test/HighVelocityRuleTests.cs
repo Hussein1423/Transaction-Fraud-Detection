@@ -53,42 +53,6 @@ namespace Transaction_Fraud_Detection_Test
             Assert.Equal(expectedPoints, result.PointsAwarded);
         }
 
-        [Fact]
-        public void Evaluate_TransactionsFromOtherCustomers_DoesNotCountThem()
-        {
-            // Arrange
-            var rule = new HighVelocityRule();
-            var currentTimestamp = new DateTimeOffset(
-                2026, 10, 26, 12, 0, 0, TimeSpan.Zero);
-
-            var currentTransaction = new Transaction
-            {
-                UserId = "user-1",
-                Timestamp = currentTimestamp
-            };
-
-            var previousTransactions = Enumerable
-                .Range(1, 6)
-                .Select(i => new Transaction
-                {
-                    UserId = "user-2",
-                    Timestamp = currentTimestamp.AddMinutes(-i)
-                })
-                .ToList();
-
-            var context = new FraudEvaluationContext
-            {
-                CurrentTransaction = currentTransaction,
-                PreviousTransactions = previousTransactions
-            };
-
-            // Act
-            var result = rule.Evaluate(context);
-
-            // Assert
-            Assert.False(result.IsTriggered);
-            Assert.Equal(0, result.PointsAwarded);
-        }
 
         [Fact]
         public void Evaluate_TransactionExactlyTenMinutesEarlier_CountsIt()

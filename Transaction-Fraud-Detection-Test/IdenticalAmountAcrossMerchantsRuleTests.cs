@@ -143,28 +143,6 @@ namespace Transaction_Fraud_Detection_Test
             Assert.Equal(0, result.PointsAwarded);
         }
 
-        [Fact]
-        public void Evaluate_DifferentUser_DoesNotTrigger()
-        {
-            // Arrange
-            var rule = new IdenticalAmountAcrossMerchantsRule();
-
-            var previousTransactions = new[]
-            {
-                CreateTransaction(userId: "user-2", merchantId: "merchant-2"),
-                CreateTransaction(userId: "user-2", merchantId: "merchant-3"),
-                CreateTransaction(userId: "user-2", merchantId: "merchant-4")
-            };
-
-            var context = CreateContext(previousTransactions);
-
-            // Act
-            var result = rule.Evaluate(context);
-
-            // Assert
-            Assert.False(result.IsTriggered);
-            Assert.Equal(0, result.PointsAwarded);
-        }
 
         [Fact]
         public void Evaluate_DifferentCurrency_DoesNotTrigger()

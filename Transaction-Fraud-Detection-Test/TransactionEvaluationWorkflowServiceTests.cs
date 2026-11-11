@@ -57,6 +57,78 @@ public class TransactionEvaluationWorkflowServiceTests
     }
 
     [Fact]
+    public async Task ProcessTransactionAsync_ExcludesPreviousTransactionsFromOtherUsers()
+    {
+        // Arrange
+        await using var dbContext = CreateDbContext();
+
+        var sameUserTransaction = new Transaction
+        {
+            TransactionId = Guid.NewGuid(),
+            UserId = "user-1",
+            Amount = 100,
+            Currency = "SAR",
+            MerchantId = "merchant-1",
+            Timestamp = DateTimeOffset.UtcNow.AddMinutes(-5)
+        };
+
+        var otherUserTransaction = new Transaction
+        {
+            TransactionId = Guid.NewGuid(),
+            UserId = "user-2",
+            Amount = 5000,
+            Currency = "SAR",
+            MerchantId = "merchant-2",
+            Timestamp = DateTimeOffset.UtcNow.AddMinutes(-3)
+        };
+
+        dbContext.Transactions.AddRange(
+            sameUserTransaction,
+            otherUserTransaction);
+
+        await dbContext.SaveChangesAsync();
+
+        var fraudEvaluationService = new FakeFraudEvaluationService(
+            new FraudEvaluationResultDto
+            {
+                RiskScore = 0,
+                Decision = FraudDecision.Allow
+            });
+
+        var workflow = new TransactionEvaluationWorkflowService(
+            dbContext,
+            fraudEvaluationService,
+            new FakeTransactionLocationService());
+
+        var request = CreateRequest();
+
+        // Act
+        await workflow.ProcessTransactionAsync(request, IPAddress.Loopback);
+
+        // Assert
+        Assert.NotNull(fraudEvaluationService.ReceivedContext);
+
+        var previousTransactions =
+            fraudEvaluationService.ReceivedContext.PreviousTransactions;
+
+        Assert.Contains(
+            previousTransactions,
+            transaction => transaction.TransactionId ==
+                           sameUserTransaction.TransactionId);
+
+        Assert.DoesNotContain(
+            previousTransactions,
+            transaction => transaction.TransactionId ==
+                           otherUserTransaction.TransactionId);
+
+        Assert.All(
+            previousTransactions,
+            transaction => Assert.Equal(
+                request.UserId,
+                transaction.UserId));
+    }
+
+    [Fact]
     public async Task ProcessTransactionAsync_PassesPreviousTransactionsToEvaluation()
     {
         // Arrange

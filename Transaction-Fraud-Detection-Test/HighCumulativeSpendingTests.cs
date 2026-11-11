@@ -217,25 +217,6 @@ namespace Transaction_Fraud_Detection_Test
             Assert.Equal(0, result.PointsAwarded);
         }
 
-        // 11. Transactions from another user
-
-        [Fact]
-        public void Evaluate_TransactionsFromOtherUsers_DoesNotCountThem()
-        {
-            var rule = new HighCumulativeSpending();
-
-            var context = CreateContext(
-                CreateTransaction(amount: 100),
-                CreateTransaction(
-                    userId: "user-2",
-                    amount: 5000,
-                    timestamp: CurrentTimestamp.AddMinutes(-5)));
-
-            var result = rule.Evaluate(context);
-
-            Assert.False(result.IsTriggered);
-            Assert.Equal(0, result.PointsAwarded);
-        }
 
         // 12. Transactions using another currency
 

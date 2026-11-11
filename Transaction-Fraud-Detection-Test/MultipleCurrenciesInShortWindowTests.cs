@@ -168,36 +168,6 @@ public class MultipleCurrenciesInShortWindowTests
         Assert.Equal(0, result.PointsAwarded);
     }
 
-    [Fact]
-    public void Evaluate_ShouldIgnoreTransactionsBelongingToOtherUsers()
-    {
-        // Arrange
-        var current = CreateTransaction(
-            userId: "user-1",
-            currency: "SAR");
-
-        var previousTransactions = new[]
-        {
-            CreateTransaction(
-                userId: "user-1",
-                currency: "SAR",
-                timestamp: CurrentTimestamp.AddMinutes(-5)),
-
-            CreateTransaction(
-                userId: "user-2",
-                currency: "USD",
-                timestamp: CurrentTimestamp.AddMinutes(-2))
-        };
-
-        var context = CreateContext(current, previousTransactions);
-
-        // Act
-        var result = _rule.Evaluate(context);
-
-        // Assert
-        Assert.False(result.IsTriggered);
-        Assert.Equal(0, result.PointsAwarded);
-    }
 
     [Fact]
     public void Evaluate_ShouldTrigger_WhenTransactionsBelongToTheSameMerchant()

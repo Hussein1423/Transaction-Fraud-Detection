@@ -61,22 +61,6 @@ namespace Transaction_Fraud_Detection_Test
             Assert.Equal(expectedPoints, result.PointsAwarded);
         }
 
-        [Fact]
-        public void Evaluate_DifferentCustomer_DoesNotTrigger()
-        {
-            // Arrange
-            var rule = new DuplicateLikeTransactionRule();
-            var previous = CreateTransaction(
-                userId: "user-2",
-                timestamp: CurrentTimestamp.AddMinutes(-1));
-
-            // Act
-            var result = rule.Evaluate(CreateContext(previous));
-
-            // Assert
-            Assert.False(result.IsTriggered);
-            Assert.Equal(0, result.PointsAwarded);
-        }
 
         [Fact]
         public void Evaluate_DifferentMerchant_DoesNotTrigger()

@@ -305,27 +305,5 @@ namespace Transaction_Fraud_Detection_Test
             Assert.False(result.IsTriggered);
             Assert.Equal(0, result.PointsAwarded);
         }
-
-        [Fact]
-        public void Evaluate_PreviousTransactionBelongsToAnotherUser_DoesNotTrigger()
-        {
-            // Arrange
-            var rule = new UnusualTransactionLocationRule();
-
-            var previous = CreateTransaction(
-                userId: "user-2",
-                city: "Jeddah",
-                timestamp: CurrentTimestamp.AddMinutes(-30));
-
-            var context = CreateContext(
-                previousTransactions: new[] { previous });
-
-            // Act
-            var result = rule.Evaluate(context);
-
-            // Assert
-            Assert.False(result.IsTriggered);
-            Assert.Equal(0, result.PointsAwarded);
-        }
     }
 }
