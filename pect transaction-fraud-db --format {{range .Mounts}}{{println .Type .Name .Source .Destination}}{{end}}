@@ -1,0 +1,67 @@
+[1mdiff --git a/Transaction-Fraud-Detection-API/Data/AppDbContext.cs b/Transaction-Fraud-Detection-API/Data/AppDbContext.cs[m
+[1mindex b7d30a8..e0ca6d7 100644[m
+[1m--- a/Transaction-Fraud-Detection-API/Data/AppDbContext.cs[m
+[1m+++ b/Transaction-Fraud-Detection-API/Data/AppDbContext.cs[m
+[36m@@ -22,6 +22,8 @@[m [mpublic class AppDbContext : DbContext[m
+ [m
+     public DbSet<AccountChangeEvent> AccountChangeEvents => Set<AccountChangeEvent>();[m
+ [m
+[32m+[m[32m    public DbSet<User> Users => Set<User>();[m
+[32m+[m
+     protected override void OnModelCreating(ModelBuilder modelBuilder)[m
+     {[m
+         base.OnModelCreating(modelBuilder);[m
+[36m@@ -82,5 +84,21 @@[m [mpublic class AppDbContext : DbContext[m
+ [m
+         modelBuilder.Entity<Transaction>()[m
+     .HasIndex(t => new { t.UserId, t.Timestamp });[m
+[32m+[m
+[32m+[m[32m        modelBuilder.Entity<User>()[m
+[32m+[m[32m    .HasIndex(u => u.Username)[m
+[32m+[m[32m    .IsUnique();[m
+[32m+[m
+[32m+[m[32m        modelBuilder.Entity<Transaction>()[m
+[32m+[m[32m            .HasOne(t => t.User)[m
+[32m+[m[32m            .WithMany(u => u.Transactions)[m
+[32m+[m[32m            .HasForeignKey(t => t.UserId)[m
+[32m+[m[32m            .OnDelete(DeleteBehavior.Restrict);[m
+[32m+[m
+[32m+[m[32m        modelBuilder.Entity<AccountChangeEvent>()[m
+[32m+[m[32m            .HasOne(e => e.User)[m
+[32m+[m[32m            .WithMany(u => u.AccountChangeEvents)[m
+[32m+[m[32m            .HasForeignKey(e => e.UserId)[m
+[32m+[m[32m            .OnDelete(DeleteBehavior.Restrict);[m
+     }[m
+ }[m
+\ No newline at end of file[m
+[1mdiff --git a/Transaction-Fraud-Detection-API/Models/AccountChangeEvent.cs b/Transaction-Fraud-Detection-API/Models/AccountChangeEvent.cs[m
+[1mindex 4657d21..aefec83 100644[m
+[1m--- a/Transaction-Fraud-Detection-API/Models/AccountChangeEvent.cs[m
+[1m+++ b/Transaction-Fraud-Detection-API/Models/AccountChangeEvent.cs[m
+[36m@@ -11,8 +11,12 @@[m [mnamespace Transaction_Fraud_Detection_API.Models[m
+         [MaxLength(100)][m
+         public string UserId { get; set; } = string.Empty;[m
+ [m
+[32m+[m[32m        public User User { get; set; } = null!;[m
+[32m+[m
+[32m+[m
+         public AccountChangeType Type { get; set; }[m
+ [m
+         public DateTimeOffset Time { get; set; } = DateTimeOffset.UtcNow;[m
+[32m+[m
+     }[m
+ }[m
+[1mdiff --git a/Transaction-Fraud-Detection-API/Models/Transaction.cs b/Transaction-Fraud-Detection-API/Models/Transaction.cs[m
+[1mindex d13baf2..61e720c 100644[m
+[1m--- a/Transaction-Fraud-Detection-API/Models/Transaction.cs[m
+[1m+++ b/Transaction-Fraud-Detection-API/Models/Transaction.cs[m
+[36m@@ -12,6 +12,9 @@[m [mpublic class Transaction[m
+     [MaxLength(100)][m
+     public string UserId { get; set; } = string.Empty;[m
+ [m
+[32m+[m[32m    public User User { get; set; } = null!;[m
+[32m+[m
+[32m+[m
+     [Precision(18, 2)][m
+     public decimal Amount { get; set; }[m
+ [m

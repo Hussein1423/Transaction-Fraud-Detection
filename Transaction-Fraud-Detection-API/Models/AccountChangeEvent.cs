@@ -11,8 +11,12 @@ namespace Transaction_Fraud_Detection_API.Models
         [MaxLength(100)]
         public string UserId { get; set; } = string.Empty;
 
+        public User User { get; set; } = null!;
+
+
         public AccountChangeType Type { get; set; }
 
         public DateTimeOffset Time { get; set; } = DateTimeOffset.UtcNow;
+
     }
 }
