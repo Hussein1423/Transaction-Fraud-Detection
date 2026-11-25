@@ -239,6 +239,41 @@ namespace Transaction_Fraud_Detection_API.Migrations
                     b.ToTable("TriggeredRules", (string)null);
                 });
 
+            modelBuilder.Entity("Transaction_Fraud_Detection_API.Models.User", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Password")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("UserId");
+
+                    b.HasIndex("Username")
+                        .IsUnique();
+
+                    b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("Transaction_Fraud_Detection_API.Models.AccountChangeEvent", b =>
+                {
+                    b.HasOne("Transaction_Fraud_Detection_API.Models.User", "User")
+                        .WithMany("AccountChangeEvents")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Transaction_Fraud_Detection_API.Models.FraudEvaluation", b =>
                 {
                     b.HasOne("Transaction_Fraud_Detection_API.Models.Transaction", "Transaction")
@@ -283,6 +318,17 @@ namespace Transaction_Fraud_Detection_API.Migrations
                     b.Navigation("PaymentAttemptFraudEvaluation");
                 });
 
+            modelBuilder.Entity("Transaction_Fraud_Detection_API.Models.Transaction", b =>
+                {
+                    b.HasOne("Transaction_Fraud_Detection_API.Models.User", "User")
+                        .WithMany("Transactions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Transaction_Fraud_Detection_API.Models.TriggeredRule", b =>
                 {
                     b.HasOne("Transaction_Fraud_Detection_API.Models.FraudEvaluation", "FraudEvaluation")
@@ -292,6 +338,13 @@ namespace Transaction_Fraud_Detection_API.Migrations
                         .IsRequired();
 
                     b.Navigation("FraudEvaluation");
+                });
+
+            modelBuilder.Entity("Transaction_Fraud_Detection_API.Models.User", b =>
+                {
+                    b.Navigation("AccountChangeEvents");
+
+                    b.Navigation("Transactions");
                 });
 #pragma warning restore 612, 618
         }

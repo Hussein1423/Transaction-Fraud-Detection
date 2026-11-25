@@ -22,6 +22,8 @@ public class AppDbContext : DbContext
 
     public DbSet<AccountChangeEvent> AccountChangeEvents => Set<AccountChangeEvent>();
 
+    public DbSet<User> Users => Set<User>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -82,5 +84,21 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<Transaction>()
     .HasIndex(t => new { t.UserId, t.Timestamp });
+
+        modelBuilder.Entity<User>()
+    .HasIndex(u => u.Username)
+    .IsUnique();
+
+        modelBuilder.Entity<Transaction>()
+            .HasOne(t => t.User)
+            .WithMany(u => u.Transactions)
+            .HasForeignKey(t => t.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AccountChangeEvent>()
+            .HasOne(e => e.User)
+            .WithMany(u => u.AccountChangeEvents)
+            .HasForeignKey(e => e.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

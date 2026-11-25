@@ -12,6 +12,9 @@ public class Transaction
     [MaxLength(100)]
     public string UserId { get; set; } = string.Empty;
 
+    public User User { get; set; } = null!;
+
+
     [Precision(18, 2)]
     public decimal Amount { get; set; }
 
